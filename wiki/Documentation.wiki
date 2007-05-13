@@ -14,7 +14,7 @@ function continue_this (maybe_undefined) {
 }
 }}}
 
-If anything, its application stands as a reminder of what JavaScript really is: the wrrld most misundestood programming language. 
+If anything, its application stands as a reminder of how much Lisp there is in [www.crockford.com/javascript/javascript.html JavaScript].
 
 === $("id") ===
 
@@ -27,3 +27,8 @@ If anything, its application stands as a reminder of what JavaScript really is: 
 == HTML ==
 
 == JSON ==
+
+
+
+
+
