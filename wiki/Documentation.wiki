@@ -1,0 +1,29 @@
+#summary One-sentence summary of this page.
+
+= Documentation =
+
+== Functions ==
+
+=== pass() ===
+
+As its name implies, this function does nothing. Its purpose is to be used as a default function in place where a continuation may be undefined.
+
+{{{
+function continue_this (maybe_undefined) {
+    (maybe_undefined || pass)(some, argument);
+}
+}}}
+
+If anything, its application stands as a reminder of what JavaScript really is: the wrrld most misundestood programming language. 
+
+=== $("id") ===
+
+=== bindAsEventListener(object, fun) ===
+
+=== Protocols(protocols) ===
+
+== HTTP ==
+
+== HTML ==
+
+== JSON ==
