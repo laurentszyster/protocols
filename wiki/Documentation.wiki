@@ -14,7 +14,7 @@ function continue_this (maybe_undefined) {
 }
 }}}
 
-If anything, its application stands as a reminder of how much Lisp there is in [www.crockford.com/javascript/javascript.html JavaScript].
+If anything, its application stands as a reminder of how much Lisp there is in [http://www.crockford.com/javascript/javascript.html JavaScript].
 
 === $("id") ===
 
@@ -27,7 +27,6 @@ If anything, its application stands as a reminder of how much Lisp there is in [
 == HTML ==
 
 == JSON ==
-
 
 
 
