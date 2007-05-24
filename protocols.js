@@ -37,13 +37,20 @@ var Protocols = function (protocols) {
 var HTTP = { // may be used as a prototype too, because ...
     requests: {},
 } 
+HTTP.fieldencode = function (s) {
+	var a = s.split("+");
+	for (var i=0, L=a.length; i<L; i++) {
+		a[i] = escape(a[i]);
+	}
+	return a.join("%2B");
+}
 HTTP.formencode = function (sb, query) {
     start = sb.length;
     for (key in query) {
         sb.push('&'); 
-        sb.push(escape(key));
+        sb.push(this.fieldencode(key));
         sb.push('='); 
-        sb.push(escape(query[key]));
+        sb.push(this.fieldencode(query[key]));
     }
     if (sb.length - start > 1) sb[start] = '?';
     return sb;
@@ -344,6 +351,7 @@ JSON.HTML = function (value, sb, className) {
                 this.HTML(value[i], sb, className)
             sb.push('</div>');
         }
+
         break;
     } default:
         sb.push(HTML.encode(value.toString())); break;
@@ -355,11 +363,11 @@ JSON.timeout = 3000; // 3 seconds
 JSON.errors = {};
 JSON.exceptions = [];
 JSON.GET = function (url, query, ok, timeout) {
-    errors = errors || this.errors;
-    exceptions = this.exceptions;
+    var errors = this.errors;
+    var exceptions = this.exceptions;
     return HTTP.request(
         'GET', HTTP.formencode([url], query).join (''), {
-            'Accept': 'application/json'
+            'Accept': 'text/javascript'
             }, null, 
         ok, 
         function (response) {
@@ -370,12 +378,12 @@ JSON.GET = function (url, query, ok, timeout) {
         );
 }
 JSON.POST = function (url, payload, ok, timeout) {
-    errors = errors || this.errors;
-    exceptions = this.exceptions;
+    var errors = this.errors;
+    var exceptions = this.exceptions;
     return HTTP.request(
         'POST', url, {
             'Content-Type': 'application/json; charset=UTF-8', 
-            'Accept': 'application/json'
+            'Accept': 'text/javascript'
             }, JSON.encode (payload, []).join (''),
         ok, 
         function (response) {
