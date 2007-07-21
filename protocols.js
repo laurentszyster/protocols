@@ -14,19 +14,19 @@ You should have received a copy of the GNU General Public License
 along with this library; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 
-var pass = function () {};
+function pass() {};
 
-var $ = function (id) {
-    return document.getElementById(id)
+function $(id) {
+    return document.getElementById(id);
 } // the simplest implementation of Prototype's defacto standard.
 
-var bindAsEventListener = function (object, fun) {
+function bindAsEventListener(object, fun) {
     return function bound (event) {
         return fun.apply(object, [event||window.event]);
     }
 } // a different event listener binding than Prototype's, as effective.
 
-var Protocols = function (protocols) {
+function Protocols(protocols) {
     var name, Fun = function () {this.initialize.apply(this, arguments)};
     for (var i=0, L=protocols.length; i<L; i++)
         for (name in protocols[i]) 
@@ -35,7 +35,7 @@ var Protocols = function (protocols) {
 } // the only OO convenience you need in JavaScript 1.5: 7 lines.
 
 var HTTP = { // may be used as a prototype too, because ...
-    requests: {},
+    requests: {}
 } 
 HTTP.fieldencode = function (s) {
 	var a = s.split("+");
@@ -61,13 +61,13 @@ HTTP.request = function (
     var key = [method, url].join(' ');
     if (HTTP.requests[key]!=null) return null;
     var req = null;
-    if (window.XMLHttpRequest) // Mozilla, Safari, ...
+    if (window.XMLHttpRequest) { // Mozilla, Safari, ...
         req = new XMLHttpRequest();
         if (req.overrideMimeType && (
             navigator.userAgent.match(/Gecko\/(\d{4})/) || [0,2005]
             )[1] < 2005)
             headers['Connection'] = 'close';
-    else if (window.ActiveXObject) {
+    } else if (window.ActiveXObject) {
         try { // IE
             req = new ActiveXObject("Msxml2.XMLHTTP");
         } catch (e) {
@@ -95,7 +95,7 @@ HTTP.response = function (key, ok, error, except) {
                     try {ok (req.responseText);} 
                     catch (e) {if (except) except(e);}
                 else if (error) 
-                    try {error (req.status);} 
+                    try {error (req.status, req.responseText);} 
                     catch (e) {if (except) except(e);}
             }
         } catch (e) {if (except) except(e);}
@@ -104,8 +104,10 @@ HTTP.response = function (key, ok, error, except) {
 HTTP.timeout = function (key) {
     try { // to trigger HTTP.requests[key].onreadystatechange() ...
         HTTP.requests[key].abort();
-        delete HTTP.requests[key]; // ... and delete the request after.
     } catch (e) {} // ... or pass.
+    finally {
+        delete HTTP.requests[key]; // ... and delete the request after.
+    }
 }
 
 var HTML = {}; // more conveniences for more applications for more ... 
@@ -117,30 +119,6 @@ HTML.encode = function (string) {
     else
         return string;
 }
-HTML.classAdd = function (element, names) {
-    var current = element.className;
-    if (current) {
-        var sb = [current];
-        for (var i=0, L=names.length; i<L; i++)
-            if (current.indexOf(names[i]) == -1) sb.push(names[i]);
-        element.className = sb.join (' ');
-    } else
-        element.className = names.join (' ');
-}
-HTML.classRemove = function (element, names) {
-    var current = element.className;
-    if (current) {
-        for (var pos, i=0, L=names.length; i<L; i++) {
-            pos = current.indexOf(names[i]);
-            if (pos > -1)
-                current = (
-                    current.substring(0,pos) + 
-                    current.substring(pos+names[i].length,current.length-1) 
-                    );
-        }
-        element.className = current;
-    }
-} // do not set styles, use them ;-)
 HTML.query = function (element) {
     var child, query = {}, children = element.childNodes;
     for (var i=0, L=children.length; i<L; i++) {
@@ -156,8 +134,40 @@ HTML.query = function (element) {
     }
     return query;
 }
+if (window.XMLHttpRequest) // Mozilla, Safari, ...
+    HTML.classSet = function (element, names) {
+        element.className = names.join(' ');
+    }
+else // IE ...
+    HTML.classSet = function (element, names) {
+        element.setAttribute("className", names.join(' '));
+    }
+HTML.classAdd = function (element, names) {
+    var current = element.className;
+    if (current) {
+        var sb = [current];
+        for (var i=0, L=names.length; i<L; i++)
+            if (current.indexOf(names[i]) == -1) sb.push(names[i]);
+        HTML.classSet(element, sb);
+    } else
+        HTML.classSet(element, names);
+}
+HTML.classRemove = function (element, names) {
+    var current = element.className;
+    if (current) {
+        for (var pos, i=0, L=names.length; i<L; i++) {
+            pos = current.indexOf(names[i]);
+            if (pos > -1)
+                current = (
+                    current.substring(0,pos) + 
+                    current.substring(pos+names[i].length,current.length-1) 
+                    );
+        }
+        HTML.classSet(element, [current]);
+    }
+} // do not set styles, use them ;-)
 HTML.update = function (element, html) {
-    if (element.innerHTML) { // Everybody's fast hack
+    if (element.innerHTML!=null) { // Everybody's fast hack
         element.innerHTML = html;
     } else { // DOM standard, ...
         var range = element.ownerDocument.createRange();
@@ -167,7 +177,7 @@ HTML.update = function (element, html) {
     }
 }
 HTML.replace = function (element, html) {
-    if (element.outerHTML) { // IE fast hack
+    if (element.outerHTML!=null) { // IE fast hack
         element.outerHTML = html;
     } else { // DOM standard, ...
         var range = element.ownerDocument.createRange();
@@ -179,7 +189,7 @@ HTML.replace = function (element, html) {
 }
 HTML.insert = function (element, html, adjacency) {
     var fragments, range = null;
-    if (element.insertAdjacentHTML) {
+    if (element.insertAdjacentHTML!=null) {
         try { // IE fast hack
             element.insertAdjacentHTML(adjacency, html); return;
         } catch (e) { // and its the fast catch.
@@ -313,7 +323,7 @@ JSON.string = function (value) {
 JSON.templates = {
     'string': ['<span class="JSONstring">', '</span>'],
     'number': ['<span class="JSONnumber">', '</span>'],
-    'boolean': ['<span class="JSONboolean">', '</span>'],
+    'boolean': ['<span class="JSONboolean">', '</span>']
 } // {'class': ['before', 'after']}
 JSON.HTML = function (value, sb, className) {
     var t = typeof value;
@@ -365,13 +375,14 @@ JSON.exceptions = [];
 JSON.GET = function (url, query, ok, timeout) {
     var errors = this.errors;
     var exceptions = this.exceptions;
+    if (query!=null)
+        var url = HTTP.formencode([url], query).join ('')
     return HTTP.request(
-        'GET', HTTP.formencode([url], query).join (''), {
+        'GET', url, {
             'Accept': 'text/javascript'
-            }, null, 
-        ok, 
-        function (response) {
-            (errors[response.toString()]||pass)(url, query);
+            }, null, ok, 
+        function (status, text) {
+            (errors[status.toString()]||pass)(url, query, text);
         }, 
         function (e) {exceptions.push(e);}, 
         timeout || this.timeout
@@ -384,17 +395,16 @@ JSON.POST = function (url, payload, ok, timeout) {
         'POST', url, {
             'Content-Type': 'application/json; charset=UTF-8', 
             'Accept': 'text/javascript'
-            }, JSON.encode (payload, []).join (''),
-        ok, 
-        function (response) {
-            (errors[response.toString()]||pass)(url, payload);
+            }, JSON.encode (payload, []).join (''), ok, 
+        function (status, text) {
+            (errors[status.toString()]||pass)(url, payload, text);
         }, 
         function (e) {exceptions.push(e);}, 
         timeout || (this.timeout * 2)
         );
 }
 JSON.update = function (id) {
-    if (!id) {
+    if (id==null) {
         return function ok (text) {
             var json = JSON.decode(text);
             for (name in json) {
@@ -408,7 +418,7 @@ JSON.update = function (id) {
         }
 }
 JSON.replace = function (id) {
-    if (!id) {
+    if (id==null) {
         return function ok (text) {
             var json = JSON.decode(text);
             for (name in json) {
@@ -422,7 +432,7 @@ JSON.replace = function (id) {
         }
 }
 JSON.insert = function (adjacency, id) {
-    if (!id) {
+    if (id==null) {
         return function ok (text) {
             var json = JSON.decode(text);
             for (name in json) {
@@ -437,7 +447,16 @@ JSON.insert = function (adjacency, id) {
                 JSON.decode(text), []
                 ).join(''), adjacency);
         }
-} // ... just enough to bootstrap a web user interface from JSON.
+}
+JSON.submit = function (element, url, ok, timeout) {
+    var query = HTML.query(element);
+    var url = HTTP.formencode([url||"/"], query).join ('');
+    if (url.length < 2048) // assert URLs under the fatal 2KB limit ...
+        JSON.GET(url, null, ok||JSON.update(), timeout);
+    else // ... or POST it
+        JSON.POST(url||"/", ok||JSON.update(), timeout);
+} 
+// ... just enough to bootstrap a web user interface from JSON.
 
 /* Note about this implementation 
  * 
