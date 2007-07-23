@@ -1,0 +1,81 @@
+<html><!-- Copyright (C) 2007 Laurent A.V. Szyster - Copylef GPL 2.0 -->
+<head>
+  <title>protocols.js > HTML</title>
+  <script src="firebug.js" type="text/javascript"></script>
+  <script src="protocols.js" type="text/javascript"></script>
+  <script src="tests.js" type="text/javascript"></script>
+  <link href="protocols.css" type="text/css" rel="stylesheet"></link>
+</head>
+
+<body>
+
+<div>  
+  <h1><a href="index.html">protocols.js</a></h1>
+  <h2><a href="documentation.html">HTML</a></h2>
+  <p>
+    The seven methods of HTML provide just enough support for the common DOM
+    manipulations: replace an element, update an element content and insert 
+    HTML markup before or after the beginning or the end of an element; 
+    add and remove CSS classes; build a query string from HTML form input 
+    values; escape text as valid CDATA.
+  </p>
+  <p>
+    Many web applications can use these seven methods only, most entreprise
+    applications will. 
+  </p>
+  <p>  
+    Fancy visual effects are expensive and tricky to run accross plateforms, 
+    drag and drop has allways been a gimmick with many pitfalls for its users
+    and GUI widgets in JavaScript are web user interface non-senses. If you 
+    want the best web user interface possible everywhere, learn to apply HTML 
+    and CSS first: <code>protocols.js</code> is designed to leverage both.
+  </p>
+  <h3>HTML.cdata(string)</h3>
+  <p>
+    ...
+  </p>
+  <pre>HTML.cdata('&lt;tag name=&quot;value&quot; /&gt;')</pre>
+  <p>
+    ...
+  </p>
+  <pre>&amp;lt;tag name=&amp;quot;value&amp;quot; /&amp;gt;</pre>
+  <p>
+    ...
+  </p>
+  <h3>HTML.query(element)</h3>
+  <p>
+    ...
+  </p>
+  <h3>HTML.classAdd(element, names)</h3>
+  <p>
+    ...
+  </p>
+  <pre id="classAdd" onclick="eval_synopsis($('classAdd'));"
+    >HTML.classAdd ($('html_classAdd_foobar'), ['hidden']);</pre>
+  <p id="html_classAdd_foobar">
+    A paragraph to hide.
+  </p>
+  <h3>HTML.classRemove(element, names)</h3>
+  <p>
+    ...
+  </p>
+  <pre onclick="eval_synopsis(this);"
+    >HTML.classRemove ($('html_classRemove_foobar'), ['hidden']);</pre>
+  <p id="html_classRemove_foobar" class="hidden">
+    A previously hidden paragraph.
+  </p>
+  <h3>HTML.update(element, html)</h3>
+  <p>
+    ...
+  </p>
+  <h3>HTML.replace(element, html)</h3>
+  <p>
+    ...
+  </p>
+  <h3>HTML.insert(element, html, adjacency)</h3>
+  <p>
+    ...
+  </p>
+</div>
+</body>
+</html>
