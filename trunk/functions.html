@@ -1,0 +1,98 @@
+<html><!-- Copyright (C) 2007 Laurent A.V. Szyster - Copylef GPL 2.0 -->
+<head>
+  <title>protocols.js > Functions</title>
+  <script src="protocols.js" type="text/javascript"></script>
+  <script src="tests.js" type="text/javascript"></script>
+  <link href="protocols.css" type="text/css" rel="stylesheet"></link>
+</head>
+
+<body>
+
+<div>  
+  <h1><a href="index.html">protocols.js</a></h1>
+  <h2><a href="documentation.html">Functions</a></h2>
+  <p>
+    Four general conveniences for JavaScript.
+  </p>
+  <h3>pass()</h3>
+  <p>
+    As its name implies, this function does nothing. 
+  </p>
+  <pre>function continue_this (maybe_undefined) {
+    (maybe_undefined || <strong>pass</strong>)(some, argument);
+}</pre>
+  <p>
+    Its purpose is to be used as a default function in place where a 
+    continuation may be undefined.
+  </p>
+  <h3>$(id)</h3>
+  <p>
+    Unless you are totally new to JavaScript you may (think you) know the
+    purpose of this function. The implementation of <code>protocols.js</code> 
+    is a pure typing convenience, a shortcut for:
+  </p>
+  <pre>function <strong>$(id)</strong> {
+    return document.getElementById(id);
+}</pre>
+  <p>
+    So, users of <code>prototype.js</code> should note that this 
+    implementation does not accept more than one argument and allways 
+    returns <code>null</code> or the DOM node identified.
+  </p>
+  <h3>bindAsEventListener(object, fun)</h3>
+  <p>
+    Bind an object as the first argument of a function that expects as
+    second argument an event, applied usually to attach an event lister
+    to an element of the document:
+  </p>
+  <pre id="bAEL_synopsis" class="synopsis" onclick="eval_synopsis(this);"
+    >$('bAEL_synopsis').onmouseout = <strong>bindAsEventListener(</strong>
+    {who: 'world!'}, function (event) {alert('hello ' + this.who);}
+    <strong>)</strong></pre>
+  <p>
+    Users of <code>prototype.js</code> should note that this implementation
+    is somewhat simpler that the one coming with version 1.5.0 of their
+    favorite JavaScript library.
+  </p>
+  <h3>Protocols(protocols)</h3>
+  <p>
+    The last global function is a simple convenience to mix-in objects and 
+    return a new prototype.
+  </p>
+  <pre class="synopsis" onclick="eval_synopsis(this);"
+    >var A = {
+    initialize: function (who) {
+        this.who = who;
+    }
+}
+var B = {
+    hello: function () {
+        alert ('hello ' + this.who);
+    }
+}
+C = <strong>Protocols (</strong>[A, B]<strong>)</strong>;
+world = new C('world!')
+world.hello();</pre>
+  <p>
+    Elaborate object protocols are possible in JavaScript, this is just a 
+    functional convenience <em>for</em> JavaScript.
+    To mix object properties in a new JavaScript <code>prototype</code>,
+    this function requires a constructor named <code>initialize</code> from 
+    one of the protocols mixed in, supports composition only and resolves
+    name conflict simply: the last one mixed-in override the previous ones.
+  </p>
+  <p>  
+    Trying to implement another object protocol than the one allready 
+    provided by the interpreter would be bound to failure: the available one 
+    is the probably the best possible in theory and certainly the best 
+    possible in practice.
+  </p>
+  <h3>Protocols.version = "0.10"</h3>
+  <p>
+    As a global instance, the <code>Protocols</code> function also provides
+    a convenient place to hold the library variables, to start with its
+    version number.
+  </p>
+</div>
+</body>
+</html>

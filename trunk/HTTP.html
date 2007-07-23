@@ -1,0 +1,72 @@
+<html><!-- Copyright (C) 2007 Laurent A.V. Szyster - Copylef GPL 2.0 -->
+<head>
+  <title>protocols.js > HTTP</title>
+  <script src="protocols.js" type="text/javascript"></script>
+  <script src="tests.js" type="text/javascript"></script>
+  <link href="protocols.css" type="text/css" rel="stylesheet"></link>
+</head>
+
+<body>
+
+<div>  
+  <h1><a href="index.html">protocols.js</a></h1>
+  <h2><a href="documentation.html">HTTP</a></h2>
+  <p>
+    The <code>HTTP</code> client provides reliable support accross browsers 
+    for asynchronous requests with timeouts and without redundant submission.
+  </p>
+  <p>
+    Synchronous requests and multiple client abstractions give their 
+    applications just enough rope to hang themselves high. When applications 
+    <em>need</em> a synchronous state transition from
+    a web controller, it should be executed either as a transition to a new
+    URL (ie: to a new page) or as a &quot;modal&quot; user interface closed
+    by an asynchronous callback (keeping the ability to &quot;abort&quot;
+    the request).
+  </p>
+  <h3>HTTP.requests</h3>
+  <p>
+    The <code>HTTP</code> client maintains a dictionnary of request 
+    objects, indexed by keys made of their HTTP method and URL requested.
+  </p>
+  <p> 
+    This dictionnary acts as a filter to prevent redundant POST
+    or GET requests to be submitted. It is usefull to inspect
+    the current pending requests:
+  </p>
+  <pre class="synopsis"
+    >HTTP.request('GET', 'hello-world.js', {}, null, alert);
+for (var k in <strong>HTTP.requests</strong>) alert(k);</pre>
+  <p>
+    Applications may also use <code>HTTP.requests</code> test the state of 
+    a pending requests by name, something practical when the state inspector 
+    is out of the request original scope and cannot possibly have a reference 
+    to the request object.
+  </p>
+  <p>
+    This is probably not one of the most visible interface in this namespace
+    but you should be glad it exist and is used to do the right thing.
+  </p>
+  <h3>HTTP.fieldencode(s)</h3>
+  <p>
+    ...
+  </p>
+  <h3>HTTP.formencode(sb, query)</h3>
+  <p>
+    ...
+  </p>
+  <h3>HTTP.request(method, url, headers, body, ok, error, except, timeout)</h3>
+  <p>
+    ...
+  </p>
+  <h3>HTTP.response(key, ok, error, except)</h3>
+  <p>
+    ...
+  </p>
+  <h3>HTTP.timeout(key)</h3>
+  <p>
+    ...
+  </p>
+</div>
+</body>
+</html>
