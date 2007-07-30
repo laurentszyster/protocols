@@ -1,13 +1,10 @@
 <html><!-- Copyright (C) 2007 Laurent A.V. Szyster - Copylef GPL 2.0 -->
 <head>
   <title>protocols.js > Functions</title>
+  <link href="site.css" type="text/css" rel="stylesheet"></link>
   <script src="protocols.js" type="text/javascript"></script>
-  <script src="tests.js" type="text/javascript"></script>
-  <link href="protocols.css" type="text/css" rel="stylesheet"></link>
 </head>
-
 <body>
-
 <div>  
   <h1><a href="index.html">protocols.js</a></h1>
   <h2><a href="documentation.html">Functions</a></h2>
@@ -29,7 +26,7 @@
   <p>
     Unless you are totally new to JavaScript you may (think you) know the
     purpose of this function. The implementation of <code>protocols.js</code> 
-    is a pure typing convenience, a shortcut for:
+    is a pure convenience, a typing shortcut:
   </p>
   <pre>function <strong>$(id)</strong> {
     return document.getElementById(id);
@@ -37,9 +34,32 @@
   <p>
     So, users of <code>prototype.js</code> should note that this 
     implementation does not accept more than one argument and allways 
-    returns <code>null</code> or the DOM node identified.
+    returns <code>null</code> or the DOM node identified (i.e.: <em>not a
+    <a 
+      href="http://www.jackslocum.com/blog/2006/11/06/rambling-at-400am-design-patterns-in-javascript-jquery-style-selectors-zebra-stripes/"
+      >composite</a> instance</em>).
   </p>
-  <h3>bindAsEventListener(object, fun)</h3>
+  <h3>$$(selector)</h3>
+  <p>
+    A typing shortcut again, with a name inspired by the API of 
+    <code>prototype.js</code>:
+  </p>
+  <pre>function <strong>$$(selector)</strong> {
+    return CSS.select(selector);
+}</pre>
+  <p>
+    Note that this is Jack Slocum's practical implementation of <a 
+    href="http://www.w3.org/TR/css3-selectors/"
+    >CSS</a> and <a 
+    href="http://www.w3.org/TR/xpath"
+    >XPATH</a> selectors.
+  </p>
+  <p>
+    See: <a 
+    href="http://www.jackslocum.com/blog/2007/01/11/domquery-css-selector-basic-xpath-implementation-with-benchmarks/"
+    >DOMQuery</a> for more information.
+  </p>
+  <h3>bindAsEventListener(object, function (event) {...})</h3>
   <p>
     Bind an object as the first argument of a function that expects as
     second argument an event, applied usually to attach an event lister
@@ -54,10 +74,12 @@
     is somewhat simpler that the one coming with version 1.5.0 of their
     favorite JavaScript library.
   </p>
-  <h3>Protocols(protocols)</h3>
+  <h3>Protocols(...)</h3>
   <p>
     The last global function is a simple convenience to mix-in objects and 
-    return a new prototype.
+    return a new <a 
+    href="http://blog.morrisjohns.com/illumination_on_javascript_prototypes?PHPSESSID=bf6155e4cd8b01d2c7f2151525041429"
+    >prototype</a>.
   </p>
   <pre class="synopsis" onclick="eval_synopsis(this);"
     >var A = {
@@ -70,29 +92,45 @@ var B = {
         alert ('hello ' + this.who);
     }
 }
-C = <strong>Protocols (</strong>[A, B]<strong>)</strong>;
+C = <strong>Protocols (</strong>A, B<strong>)</strong>;
 world = new C('world!')
 world.hello();</pre>
   <p>
     Elaborate object protocols are possible in JavaScript, this is just a 
     functional convenience <em>for</em> JavaScript.
-    To mix object properties in a new JavaScript <code>prototype</code>,
+    To mix object properties in a new JavaScript prototype,
     this function requires a constructor named <code>initialize</code> from 
     one of the protocols mixed in, supports composition only and resolves
-    name conflict simply: the last one mixed-in override the previous ones.
+    name conflict simply: the last interface mixed-in override the previous 
+    one.
   </p>
   <p>  
     Trying to implement another object protocol than the one allready 
-    provided by the interpreter would be bound to failure: the available one 
-    is the probably the best possible in theory and certainly the best 
-    possible in practice.
+    provided by the interpreter would be bound to failure: the one available 
+    is perhaps one of the best possible in theory and certainly the best 
+    one possible in practice.
   </p>
-  <h3>Protocols.version = "0.10"</h3>
+  <h3>Protocols.version</h3>
   <p>
     As a global instance, the <code>Protocols</code> function also provides
     a convenient place to hold the library variables, to start with its
     version number.
   </p>
+  <pre class="synopsis" onlclick="eval_synopsis(this);"
+    >alert(Protocols.version);</pre>
+  <h3>Protocols.onload</h3>
+  <p>
+    The <code>onload</code> property of <code>Protocols</code> is an array
+    of functions that will be called once the HTML page is ready but before
+    any linked resources have been loaded.
+  </p>
+  <pre>Protocols.onload.push(function(){alert('ready');})</pre>
+  <p>
+    See <a 
+    href="http://dean.edwards.name/weblog/2006/06/again/"
+    >http://dean.edwards.name/weblog/2006/06/again/</a>.
 </div>
+<script src="tests.js" type="text/javascript"></script>
+<link href="protocols.css" type="text/css" rel="stylesheet"></link>
 </body>
 </html>

@@ -17,24 +17,33 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 function _ie_purge(d) {
     var a = d.attributes, i, l, n;
     if (a) {
-        l = a.length;
-        for (i = 0; i < l; i += 1) {
+        l = a.length; for (i = 0; i < l; i += 1) {
             n = a[i].name;
-            if (typeof d[n] === 'function') {
-                d[n] = null;
-            }
+            if (typeof d[n] === 'function') d[n] = null;
         }
     }
     a = d.childNodes;
     if (a) {
         l = a.length;
-        for (i = 0; i < l; i += 1) {
-            _ie_purge(d.childNodes[i]);
-        }
+        for (i = 0; i < l; i += 1) _ie_purge(d.childNodes[i]);
     }
 } // see http://javascript.crockford.com/memory/leak.html
 
-function pass() {};
+function pass() {}; // noop, nada, niks, rien.
+
+function map(fun, list) {
+    var r = [];
+    for (var i=0, L=list.length; i<L; i++) 
+        r.push(fun(list[i]));
+    return r;
+}
+function filter(fun, list) {
+    var r = [];
+    for (var i=0, L=list.length; i<L; i++) 
+        if (fun(list[i]))
+            r.push(list[i]);
+    return r;
+} // a functional duo waiting for JavaScript 1.7 list comprehension
 
 function $(id) {
     return document.getElementById(id);
@@ -46,19 +55,34 @@ function bindAsEventListener(object, fun) {
     }
 } // a different event listener binding than Prototype's, as effective.
 
-function Protocols(protocols) {
-    var name, Fun = function () {this.initialize.apply(this, arguments)};
-    for (var i=0, L=protocols.length; i<L; i++)
-        for (name in protocols[i]) 
-            Fun.prototype[name] = protocols[i][name];
-    return Fun;
+var Protocols = function () {
+    var n, f = function () {this.initialize.apply(this, arguments)};
+    for (var i=0, L=arguments.length; i<L; i++)
+        for (n in arguments[i]) {
+            f.prototype[n] = arguments[i][n];
+        }
+    return f;
 } // the only OO convenience you need in JavaScript 1.5: 7 lines.
-
 Protocols.version = "1.0";
-
-var HTTP = {
-    requests: {}
-} 
+Protocols.onload = [];
+(function () {
+    var _onload = function () {
+        for (var i=0, L=Protocols.onload.length; i<L; i++) 
+            Protocols.onload[i]();
+    };
+    if (document.addEventListener) { // Mozilla
+        document.addEventListener("DOMContentLoaded", _onload, false);
+    } else if (/WebKit/i.test(navigator.userAgent)) { // Safari
+        var _timer = setInterval(function() {
+            if (/loaded|complete/.test(document.readyState)) {
+                clearInterval(_timer); 
+                _onload();
+            }
+        }, 10);
+    } else // IE is somehow supported ...
+        document.onload = _onload;
+})(); // see http://dean.edwards.name/weblog/2006/06/again/
+var HTTP = {requests: {}} 
 HTTP.fieldencode = function (s) {
 	var a = s.split("+");
 	for (var i=0, L=a.length; i<L; i++) {
@@ -135,7 +159,7 @@ HTTP.timeout = function (key) {
 var HTML = {}; // more conveniences for more applications for more ... 
 HTML._escaped = {'<': '&lt;', '>': '&gt;', '"': '&quot;', '&': '&amp;'};
 HTML._escape = function (a, b) {return HTML._escaped[b];}
-HTML.encode = function (string) {
+HTML.cdata = function (string) {
     if (/[<>"&]/.test(string)) 
         return string.replace(/([<>"&])/g, HTML._escape);
     else
@@ -144,26 +168,33 @@ HTML.encode = function (string) {
 HTML.query = function (element) {
     var child, query = {}, children = element.childNodes;
     for (var i=0, L=children.length; i<L; i++) {
-        child = children[i];
-        if (
+        child = children[i]; if (
             child.name != null && 
             /(input)|(textarea)/.test (child.nodeName.toLowerCase()) && 
              /(text)|(password)|(checkbox)|(radio)|(hidden)/.test(
                  (child.type||'').toLowerCase()
                  )
-        )
-        query[child.name] = child.value;
+            ) query[child.name] = child.value;
     }
     return query;
 }
-if (window.XMLHttpRequest) // Mozilla, Safari, ...
+if (window.XMLHttpRequest) { // Mozilla, Safari, ...
+    HTML.onEvent = function (element, type, listener) {
+        element.addEventListener(type, listener, false);
+    };
+    HTML.text = function (element) {return element.innerText;}
     HTML.classSet = function (element, names) {
         element.className = names.join(' ');
-    }
-else // IE ...
+    };
+} else { // IE ...
+    HTML.onEvent = function (element, type, listener) {
+        element.attachEvent(type, listener);
+    };
+    HTML.text = function (element) {return element.textContent;}
     HTML.classSet = function (element, names) {
         element.setAttribute("className", names.join(' '));
-    }
+    };
+} // this prevents IDE to display a nice outline but runs faster.
 HTML.classAdd = function (element, names) {
     var current = element.className;
     if (current) {
@@ -179,11 +210,10 @@ HTML.classRemove = function (element, names) {
     if (current) {
         for (var pos, i=0, L=names.length; i<L; i++) {
             pos = current.indexOf(names[i]);
-            if (pos > -1)
-                current = (
-                    current.substring(0,pos) + 
-                    current.substring(pos+names[i].length,current.length-1) 
-                    );
+            if (pos > -1) current = (
+                current.substring(0,pos) + 
+                current.substring(pos+names[i].length,current.length-1) 
+                );
         }
         HTML.classSet(element, [current]);
     }
@@ -266,6 +296,9 @@ HTML.insert = function (element, html, adjacency) {
                 fragments[i], element.nextSibling
                 );
     }
+}
+HTML.bind = function (element, type, listener) {
+    HTML.onEvent(element, type, bindAsEventListener(element, listener));
 }
 
 var JSON = {}
@@ -352,11 +385,11 @@ JSON.HTML = function (value, sb, className) {
     case 'string':
         if (template) {
             sb.push(template[0]);
-            sb.push(HTML.encode(value));
+            sb.push(HTML.cdata(value));
             sb.push(template[1]);
         } else {
             sb.push('<span class="string">');
-            sb.push(HTML.encode(value)); 
+            sb.push(HTML.cdata(value)); 
             sb.push('</span>');
         }
         break;
@@ -400,7 +433,7 @@ JSON.HTML = function (value, sb, className) {
                 sb.push ('<div class="object">');
                 for (var k in value) {
                     sb.push('<div class="property"><span class="name">');
-                    sb.push(HTML.encode (k)), 
+                    sb.push(HTML.cdata (k)), 
                     sb.push('</span>');
                     JSON.HTML (value[k], sb, k); 
                     sb.push ('</div>');
@@ -422,7 +455,7 @@ JSON.HTML = function (value, sb, className) {
         }
         break;
     } default:
-        sb.push(HTML.encode(value.toString())); break;
+        sb.push(HTML.cdata(value.toString())); break;
     }
     if (template) sb.push(template[1]);
     return sb;
@@ -431,40 +464,36 @@ JSON.timeout = 3000; // 3 seconds
 JSON.errors = {};
 JSON.exceptions = [];
 JSON.GET = function (url, query, ok, timeout) {
-    var errors = JSON.errors;
-    var exceptions = JSON.exceptions;
-    if (query!=null)
+    if (query != null)
         var url = HTTP.formencode([url], query).join ('')
     return HTTP.request(
         'GET', url, {
             'Accept': 'text/javascript'
             }, null, ok, 
         function (status, text) {
-            (errors[status.toString()]||pass)(url, query, text);
+            (JSON.errors[status.toString()]||pass)(url, query, text);
         }, 
-        function (e) {exceptions.push(e);}, 
+        function (e) {JSON.exceptions.push(e);}, 
         timeout || JSON.timeout
         );
 }
 JSON.POST = function (url, payload, ok, timeout) {
-    var errors = JSON.errors;
-    var exceptions = JSON.exceptions;
     return HTTP.request(
         'POST', url, {
             'Content-Type': 'application/json; charset=UTF-8', 
             'Accept': 'text/javascript'
             }, JSON.encode (payload, []).join (''), ok, 
         function (status, text) {
-            (errors[status.toString()]||pass)(url, payload, text);
+            (JSON.errors[status.toString()]||pass)(url, payload, text);
         }, 
-        function (e) {exceptions.push(e);}, 
+        function (e) {JSON.exceptions.push(e);}, 
         timeout || (JSON.timeout * 2)
         );
 }
 JSON.update = function (id) {
-    if (id==null)
+    if (id == null)
        return function (text) {
-            var el; var json = JSON.decode(text);
+            var json = JSON.decode(text);
             for (var key in json) try { 
                 HTML.update($(key), JSON.HTML(json[key], []).join(''));
             } catch (e) {}
@@ -474,9 +503,9 @@ JSON.update = function (id) {
     }
 }
 JSON.replace = function (id) {
-    if (id=null)
+    if (id == null)
         return function (text) {
-            var el; var json = JSON.decode(text);
+            var json = JSON.decode(text);
             for (var key in json) try { 
                 HTML.replace($(key), JSON.HTML(json[key], []).join(''));
             } catch (e) {}
@@ -486,9 +515,9 @@ JSON.replace = function (id) {
     }
 }
 JSON.insert = function (adjacency, id) {
-    if (id==null)
+    if (id == null)
         return function (text) {
-            var el; var json = JSON.decode(text);
+            var json = JSON.decode(text);
             for (var key in json) try { 
                 HTML.insert(
                     $(key), JSON.HTML(json[key], []).join(''), adjacency
@@ -501,19 +530,15 @@ JSON.insert = function (adjacency, id) {
             ).join(''), adjacency);
     }
 }
-JSON.submit = function (element, url, ok, timeout) {
-    if (ok == null) ok = JSON.update();
-    var query = HTML.query(element);
-    var formencoded = HTTP.formencode([url||"/"], query).join ('');
-    if (url.length < 2048) // assert URLs under the fatal 2KB limit ...
-        JSON.GET(formencoded, null, ok, timeout);
-    else // ... or POST it
-        JSON.POST(url||"/", ok, timeout);
-} 
-// ... just enough to bootstrap a web user interface from JSON.
 
-/* Note about this implementation 
- * 
- * Once compressed it is around 4KB long and will fit a single UDP 
- * datagram. If a simple application of HTTP, HTML and JSON is all
- * there is at hand, it's the right pick for IE and Mozilla */
+Protocols.onload.push(
+    function () {
+        var templates = $('templates'), child;
+        if (templates && templates.childNodes != null) {
+            for (child in templates.childNodes) if (child.className) {
+               JSON.templates[child.className] = child.innerHTML.split(
+                   '<json/>'
+                   );
+            }
+        }
+    });
