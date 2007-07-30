@@ -1,104 +1,38 @@
 <html><!-- Copyright (C) 2007 Laurent A.V. Szyster - Copylef GPL 2.0 -->
 <head>
-  <title>protocols.js</title>
-  <script src="protocols.js" type="text/javascript"></script>
-  <script src="publicnames.js" type="text/javascript"></script>
-  <script src="publicrdf.js" type="text/javascript"></script>
-  <script src="tests.js" type="text/javascript"></script>
+  <title>protocols.js > Documentation</title>
+  <link href="site.css" type="text/css" rel="stylesheet"></link>
   <link href="protocols.css" type="text/css" rel="stylesheet"></link>
 </head>
 <body>
 <div>  
   <h1><a href="index.html">protocols.js</a></h1>
+  <div class="menu">
+    <a 
+      href="functions.html">Functions</a><a 
+      href="HTTP.html">HTTP</a><a 
+      href="HTML.html">HTML &amp; CSS</a><a 
+      href="JSON.html">JSON</a>
+  </div>
   <h2>Documentation</h2>
   <p>
-    This library provides a collection of conveniences that 
-    implement the cross-browser boilerplate code required by all Web 2.0 
-    applications:
+    In as far as possible, each interface is documented with an interactive 
+    test case that is executed when clicked, for instance:
   </p>
-  <ol>
-    <li>
-      <dt><a href="functions.html">Functions</a><dt>
-      <dd>Four general conveniences for JavaScript.</dd>
-    </li>
-    <li>
-      <dt><a href="HTTP.html">HTTP</a></dt>
-      <dd>
-        A statefull HTTP client that provides reliable support accross 
-        browsers for asynchronous requests for text responses, with timeouts 
-        and without redundant submission.
-      </dd>
-    </di>
-    <li>
-      <dt><a href="HTML.html">HTML</a></dt>
-      <dd>
-        Update, replace and insert HTML markup; Add or remove CSS classes; 
-        Serialize a query string from HTML form input values; Escape text as 
-        valid CDATA.
-      </dd>
-    </li>
-    <li>
-      <dt><a href="JSON.html">JSON</a></dt>
-      <dd>
-        Encode and decode JSON strings; GET or POST requests for a JSON 
-        response with URLencoded or JSON payload; Template JSON objects 
-        into HTML markup; Update, replace and insert in an HTML page the 
-        templated JSON responses.
-      </dd>
-    </li>
-  </ol>
+  <pre class="synopsis" onclick="eval_synopsis(this);"
+    >alert('hello'); 
+HTML.update($('updated'), 'Hello World!');</pre>
   <p>
-    In as far as possible, each interface is documented with the synopsis
-    of an online test case. Such active synopsis change their left border
-    color from grey to orange when hovered and execute their code when 
-    clicked.
-  </p>
-  <pre class="synopsis">alert('synopsis');</pre>
-  <p>
-    Usually, synopsis yield a simple message box with the result of a
-    function, method or callback.
+    Usually, tests yield a simple message box with the result of a function.
   </p>  
+  <div id="updated" class="test">
+    ...
+  </div>
   <p>
-    Interfaces that interact with the HTML page also use the orange color 
-    on hover to highlight where the page is active, as seen in the 
-    &quot;Hello World!&quot; test case.
-  </p>
-  <h3>About This Implementation</h3>
-  <p>
-    JavaScript has a bad reputation, but 
-    <em>this</em> 700th implementation of a Lisp interpreter in Java
-    clothing does <em>not</em> suck.
-  </p>
-  <p>
-    So, I did not bend JavaScript like Ruby (<a 
-    href="http://www.prototypejs.org/"
-    >prototype</a>), Python (<a 
-    href="http://mochikit.com/"
-    >mochikit</a>) or Java (<a 
-    href="http://www.dojotoolkit.org/"
-    >Dojo</a>).
-  </p>
-  <p>
-    Neither did I try to reimplement yet another framework for glamourous 
-    throwable web applications. This library was writen for profitable
-    investments, for entreprise web applications development to get where less 
-    is more now and in long run.
-  </p>
-  <p>
-    This library has been tested with stable versions of Firefox and Internet 
-    Explorer only, does not do effects or drag-n-drop and weights less than 
-    4KB once minified and compressed.
-  </p>
-  <p>
-    Like most JavaScript libraries <code>protocols.js</code> attempts to bridge
-    the compatibility gap between browsers, although on a smaller set of 
-    interfaces and with a special focus on names.
-  </p>
-  <p>
-    With a tall stack made of JSON, HTTP, HTML and CSS to apply
-    from the client, it does not hurt to have simple JavaScript API
-    for these protocols and proper names.
-  </p>
+    If they update the HTML page, the parts updated are highlighted as above.
+  </p>  
 </div>
+<script src="protocols.js" type="text/javascript"></script>
+<script src="tests.js" type="text/javascript"></script>
 </body>
 </html>

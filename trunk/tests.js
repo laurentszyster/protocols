@@ -1,3 +1,6 @@
 function eval_synopsis (element) {
-    eval (['{', element.textContent, '}'].join(''));
+    if (element.textContent)
+        return eval (['{', element.textContent, '}'].join(''));
+    else
+        return eval (['{', element.innerText, '}'].join(''));
 }
