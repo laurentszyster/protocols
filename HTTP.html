@@ -9,21 +9,33 @@
 
 <div>  
   <h1><a href="index.html">protocols.js</a></h1>
-  <h2><a href="documentation.html">HTTP</a></h2>
+  <div class="menu">
+    <a 
+      href="documentation.html"
+      >Documentation</a>.<a 
+      href="functions.html">Functions</a><a 
+      href="HTML.html">HTML</a><a 
+      href="CSS.html">CSS</a><a 
+      href="JSON.html">JSON</a>
+  </div>
+  <h2>Hypertext Transfer Protocol(HTTP)</h2>
+  <ol>
+    <li><a href="#HTTP.requests"><em>requests</em></a></li>
+    <li><a href="#HTTP.fieldencode">fieldencode (string)</a></li>
+    <li><a href="#HTTP.formencode">formencode (object)</a></li>
+    <li><a href="#HTTP.request"
+    >request (method, url, headers, body, ok, error, except, timeout)</a></li>
+    <li><a href="#HTTP.requests">response (key, ok, error, except)</a></li>
+    <li><a href="#HTTP.timeout">timeout (key)</a></li>
+  </ol>
   <p>
-    The <code>HTTP</code> client provides reliable support accross browsers 
+    The <a 
+    href="http://tools.ietf.org/html/rfc2616"
+    >HTTP</a> client provides reliable support accross browsers 
     for asynchronous requests with timeouts and without redundant submission.
   </p>
-  <p>
-    Synchronous requests and multiple client abstractions give their 
-    applications just enough rope to hang themselves high. When applications 
-    <em>need</em> a synchronous state transition from
-    a web controller, it should be executed either as a transition to a new
-    URL (ie: to a new page) or as a &quot;modal&quot; user interface closed
-    by an asynchronous callback (keeping the ability to &quot;abort&quot;
-    the request).
-  </p>
-  <h3>HTTP.requests</h3>
+  <h3><a name="HTTP.requests" href="#"
+  >HTTP.requests</a></h3>
   <p>
     The <code>HTTP</code> client maintains a dictionnary of request 
     objects, indexed by keys made of their HTTP method and URL requested.
@@ -33,9 +45,14 @@
     or GET requests to be submitted. It is usefull to inspect
     the current pending requests:
   </p>
-  <pre class="synopsis"
-    >HTTP.request('GET', 'hello-world.js', {}, null, alert);
+  <pre class="synopsis" onclick="eval_synopsis(this);"
+    >HTTP.request('GET', 'hello-world.js', {}, null, function (text) {
+    HTML.update($('http_response'), text);
+    });
 for (var k in <strong>HTTP.requests</strong>) alert(k);</pre>
+  <div id="http_response" class="test">
+    ...
+  </div>
   <p>
     Applications may also use <code>HTTP.requests</code> test the state of 
     a pending requests by name, something practical when the state inspector 
@@ -46,23 +63,28 @@ for (var k in <strong>HTTP.requests</strong>) alert(k);</pre>
     This is probably not one of the most visible interface in this namespace
     but you should be glad it exist and is used to do the right thing.
   </p>
-  <h3>HTTP.fieldencode(s)</h3>
+  <h3><a name="HTTP.fieldencode" href="#"
+  >HTTP.fieldencode (s)</a></h3>
   <p>
     ...
   </p>
-  <h3>HTTP.formencode(sb, query)</h3>
+  <h3><a name="HTTP.formencode" href="#"
+  >HTTP.formencode (sb, query)</a></h3>
   <p>
     ...
   </p>
-  <h3>HTTP.request(method, url, headers, body, ok, error, except, timeout)</h3>
+  <h3><a name="HTTP.request" href="#"
+  >HTTP.request (method, url, headers, body, ok, error, except, timeout)</a></h3>
   <p>
     ...
   </p>
-  <h3>HTTP.response(key, ok, error, except)</h3>
+  <h3><a name="HTTP.response" href="#"
+  >HTTP.response (key, ok, error, except)</a></h3>
   <p>
     ...
   </p>
-  <h3>HTTP.timeout(key)</h3>
+  <h3><a name="HTTP.timeout" href="#"
+  >HTTP.timeout (key)</a></h3>
   <p>
     ...
   </p>

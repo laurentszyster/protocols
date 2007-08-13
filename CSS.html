@@ -1,0 +1,106 @@
+<html><!-- Copyright (C) 2007 Laurent A.V. Szyster - Copylef GPL 2.0 -->
+<head>
+  <title>protocols.js > CSS</title>
+  <link href="site.css" type="text/css" rel="stylesheet"></link>
+  <link href="protocols.css" type="text/css" rel="stylesheet"></link>
+</head>
+
+<body>
+
+<div>  
+  <h1><a href="index.html">protocols.js</a></h1>
+  <div class="menu">
+    <a 
+      href="documentation.html"
+      >Documentation</a>.<a 
+      href="functions.html">Functions</a><a 
+      href="HTTP.html">HTTP</a><a 
+      href="HTML.html">HTML</a><a 
+      href="JSON.html">JSON</a>
+  </div>
+  <h2>Cascading Style Sheets (CSS)</h2>
+  <ol>
+    <li><a href="#CSS.select">select (selector)</a></li>
+    <li><a href="#CSS.getStyle">getStyle (element, name)</a></li>
+    <li><a href="#CSS.set">set (element, classes)</a></li>
+    <li><a href="#CSS.add">add (element, classes)</a></li>
+    <li><a href="#CSS.remove">remove (element, classes)</a></li>
+  </ol>
+  <p>
+    This library is designed to decouple the control of a web user
+    interface from its visual presentation, leveraging the HTML and <a 
+    href="http://en.wikipedia.org/wiki/CSS"
+    >CSS</a> protocols with as little JavaScript as possible.
+  </p>
+  <p>
+    So its only way to change the presentation of a page - without updating 
+    the HTML source - is to set, add or remove classes.
+    The rationale is that getting named <em>computed</em> styles makes 
+    sense (to get the font weight of an element for instance), but setting
+    individual styles is a recipe for an unmaintainable presentation logic
+    that thighly couples the user interface function with its browser-specific
+    view. 
+  </p>
+  <p>
+    It is preferrable leave the last degree of freedom in 
+    presentation to the style sheets and the host page writer.
+    Good user interfaces are difficult enough to code but there are 
+    more hackers than painters in that business and supporting each and
+    every browser incompatibilities is best done with different HTML and/or
+    CSS sources eventually written by different persons.
+  </p>
+  <h3><a name="CSS.select" href="#">CSS.select (selector, element)</a></h3>
+  <p>
+    CSS also provides an advanced selection language for 
+    HTML and XML document object model. Thanks to Jack Soclum's
+    DOMQuery (which makes the most of <code>CSS</code> sources), this
+    library includes first class support for CSS selectors completed by
+    XPATH expressions.
+    I removed dependencies on <a href="http://www.extjs.com/">Ext</a> -
+    reimplementing <code>CSS.getStyle</code> - and added conveniences to
+    set, add or remove classes from an element.
+  </p>
+  <p>
+    ...
+  </p>
+  <a name="CSS.getStyle" href="#"><h3>CSS.getStyle (element, name)</a></h3>
+  <p>
+    ...
+  </p>
+  <a name="CSS.set" href="#"><h3>CSS.set (element, names)</a></h3>
+  <p>
+    ...
+  </p>
+  <style>
+    .fitwidth {width: 100%}
+  </style>
+  <pre class="synopsis" onclick="eval_synopsis(this);" 
+    >CSS.set ($('CSS_set_foobar'), ['fitwidth']);</pre>
+  <div class="test">
+    <textarea id="CSS_set_foobar"
+      >A &lt;textarea&gt; to resize.</textarea>
+  </div>
+  <a name="CSS.add" href="#"><h3>CSS.add (element, names)</a></h3>
+  <p>
+    ...
+  </p>
+  <pre onclick="eval_synopsis(this);"
+    >CSS.add ($('CSS_add_foobar'), ['hidden']);</pre>
+  <div id="CSS_add_foobar" class="test">
+    A paragraph to hide.
+  </div>
+  <a name="CSS.remove" href="#"><h3>CSS.remove (element, names)</a></h3>
+  <p>
+    ...
+  </p>
+  <pre onclick="eval_synopsis(this);"
+    >CSS.remove ($('CSS_remove_foobar'), ['hidden']);</pre>
+  <div id="CSS_remove_foobar" class="test hidden">
+    A previously hidden paragraph.
+  </div>
+</div>
+<script src="firebug.js" type="text/javascript"></script>
+<script src="protocols.js" type="text/javascript"></script>
+<script src="tests.js" type="text/javascript"></script>
+</body>
+</html>

@@ -7,83 +7,38 @@
 <body>
 <div>  
   <h1><a href="/">protocols.js</a></h1>
-  <div class="menu">
-    <a 
+  <div class="menu"><a 
       href="about.html"
       >About</a><a 
       href="documentation.html"
       >Documentation</a><a 
+      href="licence.html"
+      >Licence</a><a 
       href="http://code.google.com/p/protocols/source"
       >SVN</a>
   </div>
-  <h2>Synopsis</h2>
+  <h2>Introduction</h2>
   <p>
-    Here is the usual &quot;Hello World!&quot; suspect's sources, with linked 
-    dependencies:
-  </p>
-  <pre>&lt;html&gt;
-  &lt;head&gt;
-    &lt;title&gt;hello protocols!&lt;/title&gt;
-    &lt;link href=&quot;<a 
-    href="protocols.css"
-    >protocols.css</a>&quot; type=&quot;text/css&quot; rel=&quot;stylesheet&quot; &gt;&lt;/link&gt;
-    &lt;script src=&quot;<a 
-    href="protocols.js"
-    >protocols.js</a>&quot; type=&quot;text/javascript&quot; &gt;&lt;/script&gt;
-  &lt;/head&gt;
-  &lt;body&gt;
-    &lt;a 
-        href=&quot;#&quot; 
-        onclick=&quot;<strong>JSON.GET('<a 
-        href="hello-world.js"
-        >hello-world.js</a>', null, JSON.update());</strong>&quot;
-        &gt;hello&lt;/a&gt;
-    &lt;span id=&quot;who&quot; &gt;&lt;em class=&quot;who&quot; &gt;...&lt;/em&gt;&lt;/span&gt;
-  &lt;/body&gt;
-&lt;/html&gt;</pre>
-  <div class="test">
-    <a 
-      href="#" 
-      onclick="JSON.GET('hello-world.js', null, JSON.update());"
-      >hello</a>
-    <span id="who"><em class="who">...</em></span>
-  </div>
-  <p>
-    This first test case does the simplest possible thing required from
-    a web 2.0 client application: load a JSON object from its server and
-    update the HTML page content with its properties, mapping names in the
-    response to elements in the DOM.
+    Protocols is a small JavaScript library to support complex and large 
+    entreprise applications.
   </p>
   <p>
-    As the simplicity of this &quot;Hello World&quot; synopsis illustrate, 
-    <code>protocols.js</code> leverage better conventions and provides 
-    practical conveniences. Note also how the HTML page above can acts as 
-    a substitute of traditionnal server-side template, backed for 
-    demonstration purposes by a static JSON resource instead of an actual
-    service controller (<code>hello-world.js</code>).
+    It combines only the best of Jack Slocum's CSS and XPATH 
+    selector, some of Douglas Crockford sagacity and pearls of 
+    common blog wisdom about incompatibilities between browsers.
+    But none of the fat I also found in Prototype, Mochikit, Dojo, jQuery and 
+    Ext. 
   </p>
-  <h2>Licence</h2>
-<p>Copyright &copy; 2007 Laurent A.V. Szyster</p>
-  
-<p>This library is free software; you can redistribute it and/or modify
-it under the terms of version 2 of the GNU General Public License as
-published by the Free Software Foundation.</p>
-
-<p><a href="http://www.gnu.org/copyleft/gpl.html"
->http://www.gnu.org/copyleft/gpl.html</a></p>
-
-<p>This library is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.</p>
-
-<p>You should have received a copy of the GNU General Public License
-along with this library; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA</p>
-      
+  <p>
+    With 43 symbols only, this library supports one practical way to apply 
+    HTTP, HTML, CSS and JSON in a few common browsers so that architects, 
+    analyst programmers and web designer may leverage together the stable 
+    stack of web protocols to integrate a growing number of web services
+    into a single entreprise application's front-end.
+  <p>
+  <p>
+    You may distribute <code>protocols.js</code> under the terms of the LGPL version 3.
+  </p>
 </div>
-<script src="protocols.js" type="text/javascript"></script>
-<script src="publicnames.js" type="text/javascript"></script>
-<script src="publicrdf.js" type="text/javascript"></script>
-<script src="tests.js" type="text/javascript"></script>
 </body>
 </html>
