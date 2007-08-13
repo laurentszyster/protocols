@@ -72,6 +72,11 @@ div.test {
     border: 1px dashed #CCCCCC;
     }
 
+.wait {
+	background-image: url(loading-circle.gif);
+	background-repeat: no-repeat;
+	background-position: top right;
+	}
 .hidden {display: none;}
 
 #footer {color: grey; font-size: small; text-align: center;}

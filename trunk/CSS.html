@@ -27,39 +27,46 @@
     <li><a href="#CSS.remove">remove (element, classes)</a></li>
   </ol>
   <p>
-    This library is designed to decouple the control of a web user
+    This part of the library decouples the control of a web user
     interface from its visual presentation, leveraging the HTML and <a 
     href="http://en.wikipedia.org/wiki/CSS"
     >CSS</a> protocols with as little JavaScript as possible.
   </p>
   <p>
-    So its only way to change the presentation of a page - without updating 
-    the HTML source - is to set, add or remove classes.
+    So the only way to change the presentation of a page - other than 
+    updating the HTML source - is to set, add or remove CSS classes.
+    With <code>protocols.js</code> applications may get styles from
+    elements by name, but there is no API provided to set them.
     The rationale is that getting named <em>computed</em> styles makes 
-    sense (to get the font weight of an element for instance), but setting
-    individual styles is a recipe for an unmaintainable presentation logic
-    that thighly couples the user interface function with its browser-specific
-    view. 
+    sense (to get the font weight of an element for instance or its size), 
+    but setting them from JavaScript is a recipe for an unmaintainable 
+    presentation logic that thighly couples the user interface function 
+    with its browser-specific view. 
   </p>
   <p>
-    It is preferrable leave the last degree of freedom in 
-    presentation to the style sheets and the host page writer.
-    Good user interfaces are difficult enough to code but there are 
-    more hackers than painters in that business and supporting each and
-    every browser incompatibilities is best done with different HTML and/or
-    CSS sources eventually written by different persons.
+    It is preferrable leave the last degree of freedom in presentation to 
+    the style sheets and the host page writer. Good user interfaces are 
+    difficult enough to code, there are more hackers than painters in that 
+    business and supporting every browser incompatibilities is best done 
+    with different HTML and CSS sources. Eventually each browser specific
+    branches may be written by different persons with better taste and skills 
+    for that part of the job.
   </p>
-  <h3><a name="CSS.select" href="#">CSS.select (selector, element)</a></h3>
   <p>
-    CSS also provides an advanced selection language for 
+    What programmers apply best from CSS in JavaScript are selectors.
+  </p>
+  <p>
+    CSS also provides an advanced language to select elements for 
     HTML and XML document object model. Thanks to Jack Soclum's
     DOMQuery (which makes the most of <code>CSS</code> sources), this
     library includes first class support for CSS selectors completed by
     XPATH expressions.
-    I removed dependencies on <a href="http://www.extjs.com/">Ext</a> -
-    reimplementing <code>CSS.getStyle</code> - and added conveniences to
-    set, add or remove classes from an element.
+    I renamed its singleton <code>CSS</code>, removed dependencies on 
+    <a href="http://www.extjs.com/">Ext</a> - reimplementing 
+    <code>CSS.getStyle</code> - and added conveniences to set, add or remove 
+    classes from an element.
   </p>
+  <h3><a name="CSS.select" href="#">CSS.select (selector, element)</a></h3>
   <p>
     ...
   </p>

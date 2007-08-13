@@ -7,8 +7,8 @@
 
 <body>
 
-<div>  
-  <h1><a href="index.html">protocols.js</a></h1>
+<div>
+  <h1 id="hourGlass"><a href="index.html">protocols.js</a></h1>
   <div class="menu">
     <a 
       href="documentation.html"
@@ -21,12 +21,12 @@
   <h2>Hypertext Transfer Protocol(HTTP)</h2>
   <ol>
     <li><a href="#HTTP.requests"><em>requests</em></a></li>
+    <li><a href="#HTTP.pending"><em>pending</em></a></li>
+    <li><a href="#HTTP.state">state (active)</a></li>
     <li><a href="#HTTP.fieldencode">fieldencode (string)</a></li>
     <li><a href="#HTTP.formencode">formencode (object)</a></li>
     <li><a href="#HTTP.request"
     >request (method, url, headers, body, ok, error, except, timeout)</a></li>
-    <li><a href="#HTTP.requests">response (key, ok, error, except)</a></li>
-    <li><a href="#HTTP.timeout">timeout (key)</a></li>
   </ol>
   <p>
     The <a 
@@ -75,16 +75,6 @@ for (var k in <strong>HTTP.requests</strong>) alert(k);</pre>
   </p>
   <h3><a name="HTTP.request" href="#"
   >HTTP.request (method, url, headers, body, ok, error, except, timeout)</a></h3>
-  <p>
-    ...
-  </p>
-  <h3><a name="HTTP.response" href="#"
-  >HTTP.response (key, ok, error, except)</a></h3>
-  <p>
-    ...
-  </p>
-  <h3><a name="HTTP.timeout" href="#"
-  >HTTP.timeout (key)</a></h3>
   <p>
     ...
   </p>

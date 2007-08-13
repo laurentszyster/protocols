@@ -54,7 +54,7 @@ function $(id) {
 } // the simplest implementation of Prototype's defacto standard.
 
 function bindAsEventListener(object, fun) {
-    return function bound (event) {
+    return function listener (event) {
         return fun.apply(object, [event||window.event]);
     }
 } // a different event listener binding than Prototype's, as effective.
@@ -86,7 +86,15 @@ Protocols.onload = [];
     } else // IE is somehow supported ...
         document.onload = _onload;
 })(); // see http://dean.edwards.name/weblog/2006/06/again/
-var HTTP = {requests: {}} 
+var HTTP = {requests: {}, pending: 0};
+HTTP.state = function (active) {
+    var hourGlass = $('hourGlass');
+    if (hourGlass)
+        if (active)
+            CSS.add (hourGlass, ['wait']);
+        else
+            CSS.remove (hourGlass, ['wait']);
+}
 HTTP.fieldencode = function (s) {
 	var a = s.split("+");
 	for (var i=0, L=a.length; i<L; i++) {
@@ -98,9 +106,9 @@ HTTP.formencode = function (sb, query) {
     start = sb.length;
     for (key in query) {
         sb.push('&'); 
-        sb.push(this.fieldencode(key));
+        sb.push(HTTP.fieldencode(key));
         sb.push('='); 
-        sb.push(this.fieldencode(query[key]));
+        sb.push(HTTP.fieldencode(query[key].toString()));
     }
     if (sb.length - start > 1) sb[start] = '?';
     return sb;
@@ -125,14 +133,19 @@ HTTP.request = function (
             catch (e) {;}
         }
     }
-    if (!req) {(request.except||pass)(); return null;}
+    if (!req) {
+        (except||pass)(key, "XMLHttpRequest not supported"); 
+        return null;
+    }
     HTTP.requests[key] = req;
     req.open(method, url, true);
     for (var name in headers) 
         req.setRequestHeader(name, headers[name]);
-    req.onreadystatechange = this.response(key, ok, error, except);
+    req.onreadystatechange = HTTP.response(key, ok, error, except);
     req.send(body);
     setTimeout('HTTP.timeout("' + key + '")', timeout || 3000);
+    if (HTTP.pending == 0) HTTP.state(true);
+    HTTP.pending++;
     return key;
 }
 HTTP.response = function (key, ok, error, except) {
@@ -141,19 +154,23 @@ HTTP.response = function (key, ok, error, except) {
         try {
             if (req.readyState == 4) {
                 HTTP.requests[key] = null;
+                HTTP.pending--;
+                if (HTTP.pending == 0) HTTP.state(false);
                 if (req.status == 200) 
                     try {ok (req.responseText);} 
-                    catch (e) {if (except) except(e);}
+                    catch (e) {if (except) except(key, e);}
                 else if (error) 
                     try {error (req.status, req.responseText);} 
-                    catch (e) {if (except) except(e);}
+                    catch (e) {if (except) except(key, e);}
             }
-        } catch (e) {if (except) except(e);}
+        } catch (e) {if (except) except(key, e);}
     } // It's the one obvious way to dispatch a responseText right!
 }
 HTTP.timeout = function (key) {
     try { // to trigger HTTP.requests[key].onreadystatechange() ...
         HTTP.requests[key].abort();
+        HTTP.pending--;
+        if (HTTP.pending == 0) HTTP.state(false);
     } catch (e) {} // ... or pass.
     finally {
         delete HTTP.requests[key]; // ... and delete the request after.
@@ -169,16 +186,18 @@ HTML.cdata = function (string) {
     else
         return string;
 }
-HTML.input = function (element) {
-    var child, query = {}, children = element.childNodes;
-    for (var i=0, L=children.length; i<L; i++) {
-        child = children[i]; if (
-            child.name != null && 
-            /(input)|(textarea)/.test (child.nodeName.toLowerCase()) && 
+HTML.input = function (elements, query) {
+    for (var el, i=0, L=elements.length; i<L; i++) {
+        el = elements[i]; 
+        if (
+            el.name != null && 
+            /(input)|(textarea)/.test (el.nodeName.toLowerCase()) && 
              /(text)|(password)|(checkbox)|(radio)|(hidden)/.test(
-                 (child.type||'').toLowerCase()
+                 (el.type||'').toLowerCase()
                  )
-            ) query[child.name] = child.value;
+            ) query[el.name] = el.value;
+        else if (el.childNodes)
+            HTML.input (el.childNodes, query)
     }
     return query;
 }
@@ -301,7 +320,7 @@ JSON.decode = function (string) {
         throw new SyntaxError("parseJSON");
     }
 }
-JSON.strb = function (value, sb) {
+JSON.buffer = function (value, sb) {
     switch (typeof value) {
     case 'string':
         sb.push ('"');
@@ -322,8 +341,8 @@ JSON.strb = function (value, sb) {
         else if (value.length == null) { // Object
             sb.push ('{');
             for (k in value) {
-                JSON.strb (k, sb), sb.push (':'); 
-                JSON.strb (value[k], sb); sb.push (',');
+                JSON.buffer (k, sb), sb.push (':'); 
+                JSON.buffer (value[k], sb); sb.push (',');
                 }
             var last = sb.length-1;
             if (sb[last] == ',') sb[last] = '}';
@@ -331,7 +350,7 @@ JSON.strb = function (value, sb) {
         } else { // Array
             sb.push ('[');
             for (var i=0, L=value.length; i<L; i++) {
-                JSON.strb (value[i], sb); sb.push (',')
+                JSON.buffer (value[i], sb); sb.push (',')
                 }
             var last = sb.length-1;
             if (sb[last] == ',') sb[last] = ']';
@@ -350,7 +369,7 @@ JSON.strb = function (value, sb) {
     }
 }
 JSON.encode = function (value) {
-    return this.strb(value, []).join('');
+    return JSON.buffer(value, []).join('');
 }
 JSON.templates = {} // {'class': ['before', 'after']}
 JSON.HTML = function (value, sb, className) {
@@ -466,7 +485,7 @@ JSON.POST = function (url, payload, ok, headers, timeout) {
             };
     }
     return HTTP.request(
-        'POST', url, headers, JSON.strb (payload, []).join (''), ok, 
+        'POST', url, headers, JSON.buffer (payload, []).join (''), ok, 
         function (status, text) {
             (JSON.errors[status.toString()]||pass)(url, payload, text);
         }, 
@@ -478,42 +497,37 @@ JSON.update = function (id) {
     if (id == null)
        return function (text) {
             var json = JSON.decode(text);
-            for (var key in json) try { 
+            for (var key in json)
                 HTML.update($(key), JSON.HTML(json[key], []).join(''));
-            } catch (e) {}
         }
     return function (text) {
         HTML.update($(id), JSON.HTML(JSON.decode(text), []).join(''));
     }
 }
-JSON.replace = function (id) {
-    if (id == null)
-        return function (text) {
-            var json = JSON.decode(text);
-            for (var key in json) try { 
-                HTML.replace($(key), JSON.HTML(json[key], []).join(''));
-            } catch (e) {}
-        }
-    return function (text) {
-        HTML.replace($(id), JSON.HTML(JSON.decode(text), []).join(''));
-    }
-}
 JSON.insert = function (adjacency, id) {
-    if (id == null)
-        return function (text) {
-            var json = JSON.decode(text);
-            for (var key in json) try { 
-                HTML.insert(
-                    $(key), JSON.HTML(json[key], []).join(''), adjacency
-                    );
-            } catch (e) {}
-        }
     return function (text) {
         HTML.insert($(id), JSON.HTML(
             JSON.decode(text), []
             ).join(''), adjacency);
     }
 }
+JSON.extend = function (adjacency, id) {
+    return function (text) {
+        var json = JSON.decode(text);
+        if (typeof json == 'object' && json.length) {
+            var sb = [];
+            if (adjacency == 'beforeEnd' || adjacency == 'beforeBegin') 
+                for (var i=0, L=json.length; i<L; i++)
+                    JSON.HTML(json[i], sb);
+            else (adjacency == 'afterBegin' || adjacency == 'afterEnd')
+                for (var i=json.length-1; i>-1; i--)
+                    JSON.HTML(json[i], sb);
+            HTML.insert($(id), sb.join(''), adjacency);
+        } else 
+            HTML.insert($(id), JSON.HTML(json, []).join(''), adjacency);
+    }
+}
+
 
 var CSS = (function(){
     /*

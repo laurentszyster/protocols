@@ -50,19 +50,43 @@
     Many web applications can use these methods only, most entreprise
     applications will. 
   </p>
-  <h3><a name="HTML.cdata" href="#">HTML.cdata(string)</a></h3>
+  <h3><a name="HTML.cdata" href="#">HTML.cdata (string)</a></h3>
   <p>
     ...
   </p>
   <pre
-    id="cdata" class="synopsis" onclick="{HTML.update ($('html_cdata'), eval_synopsis($('cdata')));}" 
+    class="synopsis" 
+    onclick="{HTML.update ($('html_cdata'), eval_synopsis(this));}" 
     >HTML.cdata('&lt;tag name=&quot;value&quot; /&gt;')</pre>
   <div id="html_cdata" class="test">...</div>
   <p>
     ...
   </p>
+  <h3><a name="HTML.text" href="#">HTML.text (element)</a></h3>
+  <p>
+    ...
+  </p>
+  <pre
+    class="synopsis" 
+    onclick="{HTML.update ($('html_text'), eval_synopsis(this));}" 
+    >HTML.text($$('ol')[0]);</pre>
+  <div id="html_text" class="test">...</div>
+  <p>
+    ...
+  </p>
   <h3><a name="HTML.input" href="#"
-  >HTML.input (element)</a></h3>
+  >HTML.input (elements, query)</a></h3>
+  <p>
+    ...
+  </p>
+  <div class="test">
+    <form>Hello <input name="hello" type="text" value="world" /> !</form>
+  </div>
+  <pre
+    class="synopsis" 
+    onclick="{HTML.update ($('html_input'), JSON.encode(eval_synopsis(this)));}" 
+    >HTML.input($$('form'), {});</pre>
+  <div id="html_input" class="test">...</div>
   <p>
     ...
   </p>
