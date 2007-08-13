@@ -38,6 +38,7 @@ pre {
     
 pre.synopsis:hover {
     border-left: 2px solid #6666FF;
+    background-color: #DDDDEE;
     }
     
 body > div {margin: auto; width: 720px;}

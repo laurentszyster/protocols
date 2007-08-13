@@ -7,56 +7,107 @@
 <body>
 <div>  
   <h1><a href="index.html">protocols.js</a></h1>
-  <h2><a href="documentation.html">JSON</a></h2>
+  <div class="menu">
+    <a 
+      href="documentation.html"
+      >Documentation</a>.<a 
+      href="functions.html">Functions</a><a 
+      href="HTTP.html">HTTP</a><a 
+      href="HTML.html">HTML</a><a 
+      href="CSS.html">CSS</a>
+  </div>
+  <h2>JavaScript Object Notation (JSON)</h2>
+  <ol>
+    <li><a href="#JSON.templates"><em>templates</em></a></li>
+    <li><a href="#JSON.timeout"><em>timeout</em></a></li>
+    <li><a href="#JSON.errors"><em>errors</em></a></li>
+    <li><a href="#JSON.decode">decode (string)</a></li>
+    <li><a href="#JSON.strb">strb (object, sb)</a></li>
+    <li><a href="#JSON.encode">encode (object)</a></li>
+    <li><a href="#JSON.HTML">HTML (object, sb)</a></li>
+    <li><a href="#JSON.GET">GET (url, query, ok, headers, timeout)</a></li>
+    <li><a href="#JSON.POST">POST (url, object, ok, headers, timeout)</a></li>
+    <li><a href="#JSON.update">update (id)</a></li>
+    <li><a href="#JSON.insert">insert (id, adjacency)</a></li>
+  </ol>
+  <h3>Synopsis</h3>
+  <pre>JSON.GET('<a 
+        href="hello-world.js"
+        >hello-world.js</a>', null, JSON.update());</pre>
   <p>
-    ...
-  </p>
-  <p>
-    Note that, by convention, CSS class names and HTML id attributes are
+    By convention, CSS class names and HTML id attributes are
     used throughout the library to link JSON namespaces to HTML templates 
     and DOM elements.
   </p>
-  <h3>JSON.timeout</h3>
+  <div id="synopsis_templates" class="templates">
+    ...
+  </div>
+  <p>
+    Note how the source above acts as a substitute of traditionnal 
+    server-side templates and how it can be supported for architectural 
+    and demonstration purposes by a static JSON resource instead of an actual
+    service controller (<code>hello-world.js</code>).
+  </p>
+  <div class="test">
+    <a 
+      href="#" 
+      onclick="JSON.GET('hello-world.js', null, JSON.update());"
+      >hello</a>
+    <span id="who"><em class="who">...</em></span>
+  </div>
+  <h3><a name="JSON.templates" href="#">JSON.templates</a></h3>
   <p>
     ...
   </p>
-  <h3>JSON.errors</h3>
+  <h3><a name="JSON.timeout" href="#">JSON.timeout</a></h3>
   <p>
     ...
   </p>
-  <h3>JSON.decode(string)</h3>
+  <h3><a name="JSON.errors" href="#">JSON.errors</a></h3>
   <p>
     ...
   </p>
-  <h3>JSON.encode(object, sb)</h3>
+  <h3><a name="JSON.decode" href="#">JSON.decode (string)</a></h3>
   <p>
     ...
   </p>
-  <h3>JSON.string(object)</h3>
+  <h3><a name="JSON.strb" href="#">JSON.strb (object, sb)</a></h3>
   <p>
     ...
   </p>
-  <h3>JSON.HTML(object, sb)</h3>
+  <h3><a name="JSON.encode" href="#">JSON.encode (object)</a></h3>
   <p>
     ...
   </p>
-  <h3>JSON.GET(url, query, ok)</h3>
+  <h3><a name="JSON.HTML" href="#">JSON.HTML (object, sb)</a></h3>
   <p>
     ...
   </p>
-  <h3>JSON.POST(url, object, ok)</h3>
+  <h3><a name="JSON.GET" href="#"
+  >JSON.GET (url, query, ok, headers, timeout)</a></h3>
   <p>
     ...
   </p>
-  <h3>JSON.update(id)</h3>
+  <pre class="synopsis" onclick="eval_synopsis(this);"
+    >JSON.GET ('hello-world.js', null, alert);</pre>
   <p>
     ...
   </p>
-  <h3>JSON.replace(id)</h3>
+  <h3><a name="JSON.POST" href="#"
+  >JSON.POST (url, object, ok, headers, timeout)</a></h3>
   <p>
     ...
   </p>
-  <h3>JSON.insert(id, adjacency)</h3>
+  <pre class="synopsis" onclick="eval_synopsis(this);"
+    >JSON.POST ('hello.php', {'who': 'world'}, alert);</pre>
+  <p>
+    ...
+  </p>
+  <h3><a name="JSON.update" href="#">JSON.update (id)</a></h3>
+  <p>
+    ...
+  </p>
+  <h3><a name="JSON.insert" href="#">JSON.insert (id, adjacency)</a></h3>
   <p>
     ...
   </p>

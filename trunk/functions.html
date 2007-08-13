@@ -2,16 +2,37 @@
 <head>
   <title>protocols.js > Functions</title>
   <link href="site.css" type="text/css" rel="stylesheet"></link>
-  <script src="protocols.js" type="text/javascript"></script>
+  <link href="protocols.css" type="text/css" rel="stylesheet"></link>
 </head>
 <body>
 <div>  
   <h1><a href="index.html">protocols.js</a></h1>
-  <h2><a href="documentation.html">Functions</a></h2>
+  <div class="menu">
+    <a 
+      href="documentation.html"
+      >Documentation</a>.<a 
+      href="HTTP.html">HTTP</a><a 
+      href="HTML.html">HTML</a><a 
+      href="CSS.html">CSS</a><a 
+      href="JSON.html">JSON</a>
+  </div>
+  <h2>Functions</h2>
+  <ol>
+    <li><a href="#pass">pass ()</a></li>
+    <li><a href="#map">map (fun, list)</a></li>
+    <li><a href="#filter">filter (fun, list)</a></li>
+    <li><a href="#$">$ (id)</a></li>
+    <li><a href="#$$">$$ (selector, element)</a></li>
+    <li><a href="#bindAsEventListener"
+    >bindAsEventListener (object, fun)</a></li>
+    <li><a href="#Protocols">Protocols ()</a></li>
+    <li><a href="#Protocols.version"><em>Protocols.version</em></a></li>
+    <li><a href="#Protocols.onload"><em>Protocols.onload</em></a></li>
+  </ol>
   <p>
-    Four general conveniences for JavaScript.
+    A few convenient functions.
   </p>
-  <h3>pass()</h3>
+  <h3><a name="pass" href="#">pass ()</a></h3>
   <p>
     As its name implies, this function does nothing. 
   </p>
@@ -22,7 +43,17 @@
     Its purpose is to be used as a default function in place where a 
     continuation may be undefined.
   </p>
-  <h3>$(id)</h3>
+  <h3><a name="map" href="#">map (fun, list)</a></h3>
+  <pre>map(alert, ["1","2","3"]);</pre>
+  <p>
+    ... 
+  </p>
+  <h3><a name="filter" href="#">filter (fun, list)</a></h3>
+  <pre>alert(JSON.encode(filter(pass, [1,2,3])));</pre>
+  <p>
+    ... 
+  </p>
+  <h3><a name="$" href="#">$ (id)</a></h3>
   <p>
     Unless you are totally new to JavaScript you may (think you) know the
     purpose of this function. The implementation of <code>protocols.js</code> 
@@ -39,13 +70,13 @@
       href="http://www.jackslocum.com/blog/2006/11/06/rambling-at-400am-design-patterns-in-javascript-jquery-style-selectors-zebra-stripes/"
       >composite</a> instance</em>).
   </p>
-  <h3>$$(selector)</h3>
+  <h3><a name="$$" href="#">$$ (selector, element)</a></h3>
   <p>
     A typing shortcut again, with a name inspired by the API of 
     <code>prototype.js</code>:
   </p>
-  <pre>function <strong>$$(selector)</strong> {
-    return CSS.select(selector);
+  <pre>function <strong>$$(selector, element)</strong> {
+    return CSS.select(selector, element);
 }</pre>
   <p>
     Note that this is Jack Slocum's practical implementation of <a 
@@ -59,7 +90,8 @@
     href="http://www.jackslocum.com/blog/2007/01/11/domquery-css-selector-basic-xpath-implementation-with-benchmarks/"
     >DOMQuery</a> for more information.
   </p>
-  <h3>bindAsEventListener(object, function (event) {...})</h3>
+  <h3><a name="bindAsEventListener" href="#"
+  >bindAsEventListener (object, fun)</a></h3>
   <p>
     Bind an object as the first argument of a function that expects as
     second argument an event, applied usually to attach an event lister
@@ -74,7 +106,7 @@
     is somewhat simpler that the one coming with version 1.5.0 of their
     favorite JavaScript library.
   </p>
-  <h3>Protocols(...)</h3>
+  <h3><a name="Protocols" href="#">Protocols ()</a></h3>
   <p>
     The last global function is a simple convenience to mix-in objects and 
     return a new <a 
@@ -110,15 +142,16 @@ world.hello();</pre>
     is perhaps one of the best possible in theory and certainly the best 
     one possible in practice.
   </p>
-  <h3>Protocols.version</h3>
+  <h3><a name="Protocols.version" href="#">Protocols.version</a></h3>
   <p>
     As a global instance, the <code>Protocols</code> function also provides
     a convenient place to hold the library variables, to start with its
     version number.
   </p>
-  <pre class="synopsis" onlclick="eval_synopsis(this);"
+  <pre 
+    class="synopsis" onclick="eval_synopsis(this);"
     >alert(Protocols.version);</pre>
-  <h3>Protocols.onload</h3>
+  <h3><a name="Protocols.onload" href="#">Protocols.onload</a></h3>
   <p>
     The <code>onload</code> property of <code>Protocols</code> is an array
     of functions that will be called once the HTML page is ready but before
@@ -130,7 +163,7 @@ world.hello();</pre>
     href="http://dean.edwards.name/weblog/2006/06/again/"
     >http://dean.edwards.name/weblog/2006/06/again/</a>.
 </div>
+<script src="protocols.js" type="text/javascript"></script>
 <script src="tests.js" type="text/javascript"></script>
-<link href="protocols.css" type="text/css" rel="stylesheet"></link>
 </body>
 </html>

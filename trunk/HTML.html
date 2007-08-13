@@ -10,29 +10,47 @@
 
 <div>  
   <h1><a href="index.html">protocols.js</a></h1>
-  <h2><a href="documentation.html">HTML</a></h2>
+  <div class="menu">
+    <a 
+      href="documentation.html"
+      >Documentation</a>.<a 
+      href="functions.html">Functions</a><a 
+      href="HTTP.html">HTTP</a><a 
+      href="CSS.html">CSS</a><a 
+      href="JSON.html">JSON</a>
+  </div>
+  <h2>HyperText Markup Language (HTML)</h2>
+  <ol>
+    <li><a href="#HTML.cdata">cdata (string)</a></li>
+    <li><a href="#HTML.text">text (element)</a></li>
+    <li><a href="#HTML.input">input (element)</a></li>
+    <li><a href="#HTML.update">update (element, html)</a></li>
+    <li><a href="#HTML.replace">replace (element, html)</a></li>
+    <li><a href="#HTML.insert">insert (element, html, adjacency)</a></li>
+    <li><a href="#HTML.bind">bind (element, type, fun)</a></li>
+    <li><a href="#HTML.listen">listen (element, type, fun)</a></li>
+  </ol>
   <p>
-    The ten methods of HTML provide just enough support for the common DOM
-    manipulations: replace an element, update an element content and insert 
-    HTML markup before or after the beginning or the end of an element; 
-    add and remove CSS classes; attach event listeners; build a query string 
-    from HTML form input values; escape text as valid CDATA.
+    Learning and depending on every <a 
+    href="http://www.w3.org/TR/1999/REC-html401-19991224/"
+    >HTML</a> document object model APIs is far more costly than mastering 
+    once the protocol itself. And practically it is also a lot more 
+    efficient and reliable to directly &quot;write&quot; hypertext markup and 
+    let each browser parse, instanciate a DOM and render it. 
+  </p>
+  <p>
+    The eight methods of <code>HTML</code> provide just enough support for the 
+    most common manipulations of an interactive web page: replace an element, 
+    update an element content and insert HTML markup before or after the 
+    beginning or the end of an element; attach event listeners; build a query 
+    string from HTML form input values; get an element's CDATA text only; 
+    escape text as valid CDATA.
   </p>
   <p>
     Many web applications can use these methods only, most entreprise
     applications will. 
   </p>
-  <p>  
-    Fancy visual effects are expensive and tricky to run accross plateforms, 
-    drag and drop has allways been a gimmick with many pitfalls for its users
-    and GUI widgets in JavaScript are web user interface non-senses. If you 
-    want the best web user interface possible everywhere then learn to apply 
-    HTML and CSS.
-  </p>
-  <p>
-    This library is designed to leverage both.
-  </p>
-  <h3>HTML.cdata(string)</h3>
+  <h3><a name="HTML.cdata" href="#">HTML.cdata(string)</a></h3>
   <p>
     ...
   </p>
@@ -43,59 +61,33 @@
   <p>
     ...
   </p>
-  <h3>HTML.query(element)</h3>
+  <h3><a name="HTML.input" href="#"
+  >HTML.input (element)</a></h3>
   <p>
     ...
   </p>
-  <h3>HTML.classSet(element, names)</h3>
+  <h3><a name="HTML.update" href="#"
+  >HTML.update (element, html)</a></h3>
   <p>
     ...
   </p>
-  <style>
-    .fitwidth {width: 100%}
-  </style>
-  <pre id="classSet" class="synopsis" onclick="eval_synopsis($('classSet'));" 
-    >HTML.classSet ($('html_classSet_foobar'), ['fitwidth']);</pre>
-  <div class="test">
-    <textarea id="html_classSet_foobar"
-      >A &lt;textarea&gt; to resize.</textarea>
-  </div>
-  <h3>HTML.classAdd(element, names)</h3>
+  <h3><a name="HTML.replace" href="#"
+  >HTML.replace (element, html)</a></h3>
   <p>
     ...
   </p>
-  <pre id="classAdd" onclick="eval_synopsis($('classAdd'));"
-    >HTML.classAdd ($('html_classAdd_foobar'), ['hidden']);</pre>
-  <div id="html_classAdd_foobar" class="test">
-    A paragraph to hide.
-  </div>
-  <h3>HTML.classRemove(element, names)</h3>
+  <h3><a name="HTML.insert" href="#"
+  >HTML.insert (element, html, adjacency)</a></h3>
   <p>
     ...
   </p>
-  <pre onclick="eval_synopsis(this);"
-    >HTML.classRemove ($('html_classRemove_foobar'), ['hidden']);</pre>
-  <div id="html_classRemove_foobar" class="test hidden">
-    A previously hidden paragraph.
-  </div>
-  <h3>HTML.update(element, html)</h3>
+  <h3><a name="HTML.bind" href="#"
+  >HTML.bind (element, type, fun)</a></h3>
   <p>
-    ...
+    Bind a function to an element as a listener to event of a given type. 
   </p>
-  <h3>HTML.replace(element, html)</h3>
-  <p>
-    ...
-  </p>
-  <h3>HTML.insert(element, html, adjacency)</h3>
-  <p>
-    ...
-  </p>
-  <h3>HTML.bind(element, type, function (event) {...})</h3>
-  <p>
-    Bind a function to an element as an listener to event of a given type. 
-  </p>
-  <pre id="bind" class="synospis" onclick="eval_synopsis($('bind'));"
-    >HTML.bind ($('html_bind_foobar'), 'click', function (event) {
+  <pre class="synospis" onclick="eval_synopsis(this);"
+    >HTML.bind($('html_bind_foobar'), 'click', function (event) {
     alert(this.innerHTML);
     return true;
     });</pre>
@@ -106,18 +98,19 @@
     Note how <code>this</code> in the bound function refers to the 
     <code>element</code> it was binded to.
   </p>
-  <h3>HTML.onEvent(element, type, function (event) {...})</h3>
+  <h3><a name="HTML.listen" href="#"
+  >HTML.listen (element, type, fun)</a></h3>
   <p>
     ...
   </p>
-  <pre id="onEvent" onclick="eval_synopsis($('onEvent'));"
-    >HTML.onEvent ($('html_onEvent_foobar'), 'click', bindAsEventListener (
+  <pre class="synospis" onclick="eval_synopsis(this);"
+    >HTML.listen($('html_listen_foobar'), 'click', bindAsEventListener (
     {"hello": "World!"}, function (event) {
-        alert(JSON.string(this));
+        alert(JSON.encode(this));
         return true;
     }
     ));</pre>
-  <div id="html_onEvent_foobar" class="test">
+  <div id="html_listen_foobar" class="test">
     Click here to send an event to the attached listener.
   </div>
 </div>

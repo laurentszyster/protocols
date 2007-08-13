@@ -7,14 +7,23 @@
 <body>
 <div>  
   <h1><a href="index.html">protocols.js</a></h1>
-  <div class="menu">
-    <a 
-      href="functions.html">Functions</a><a 
-      href="HTTP.html">HTTP</a><a 
-      href="HTML.html">HTML &amp; CSS</a><a 
-      href="JSON.html">JSON</a>
+  <div class="menu"><a 
+      href="about.html"
+      >About</a><a 
+      href="licence.html"
+      >Licence</a><a 
+      href="http://code.google.com/p/protocols/source"
+      >SVN</a>
   </div>
   <h2>Documentation</h2>
+  <ol>
+    <li><a href="functions.html">Functions</a></li>
+    <li><a href="HTTP.html">Hypertext Transfer Protocol (HTTP)</a></li>
+    <li><a href="HTML.html">Hypertext Markup Language (HTML)</a></li>
+    <li><a href="CSS.html">Cascading Style Sheets (CSS)</a></li>
+    <li><a href="JSON.html">JavaScript Object Notation (JSON)</a></li>
+  </ol>
+  <h3>Synopsis</h3>
   <p>
     In as far as possible, each interface is documented with an interactive 
     test case that is executed when clicked, for instance:
@@ -29,8 +38,9 @@ HTML.update($('updated'), 'Hello World!');</pre>
     ...
   </div>
   <p>
-    If they update the HTML page, the parts updated are highlighted as above.
-  </p>  
+    When such test modify the page the document parts updated are highlighted 
+    as above.
+  </p>
 </div>
 <script src="protocols.js" type="text/javascript"></script>
 <script src="tests.js" type="text/javascript"></script>
