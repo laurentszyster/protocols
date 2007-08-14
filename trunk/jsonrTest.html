@@ -1,0 +1,78 @@
+<html><!-- /* Copyright (C) 2007 Real Software nv/sa
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA 
+--><head>
+  <title>JSONR Test</title>
+  <link type="text/css" rel="stylesheet" href="protocols.css"></link>
+  <link type="text/css" rel="stylesheet" href="site.css"></link>
+</head>
+<body>
+<div>
+  <h1><a href="index.html">JSONR</a> Test</h1>
+  <div id="jsonrModelTab">
+    <p>
+      Use or modify the JSONR pattern below:
+    </p>
+    <textarea id="jsonrModel" rows="16" cols="72">{
+  "number range": 100, 
+  "any string": "",
+  "regular string": "[a-z]+$",
+  "collection": [-10],
+  "relation": [true, "[A-Z]+$", 99.99],
+  "table": [[true, false, ".+"]],
+  "options": {"test": ".+", "again": false}
+}</textarea>
+    <br />
+    <p>
+      Then interpret it as an HTML view and a JavaScript controller.
+    </p>
+    <input type="button" value="interpret &gt;&gt;&gt;" 
+        onclick="{jsonrTestInterpret();}"
+        />
+    <p id="jsonrModelError"></p>
+  </div>
+  <div id="jsonrViewTab" class="hidden">
+    <p>
+      Update the JSON object using the generated view and controller:
+    </p>
+    <div id="jsonrView"></div>
+    <p>
+      Then serialize it for transfer or go back to your model.
+    </p>
+    <input type="button" value="&lt;&lt;&lt; modelize" 
+        onclick="{jsonrTestModelize();}"
+        />
+    <input type="button" value="serialize &gt;&gt;&gt;" 
+        onclick="{jsonrTestSerialize();}"
+        />
+  </div>
+  <div id="jsonrObjectTab" class="hidden">
+    <p>
+      Update the JSON string below:
+    </p>
+    <textarea id="jsonrString" rows="16" cols="72" ></textarea>
+    <p>
+      And refresh the view with it according to the model.
+    </p>
+    <input type="button" value="&lt;&lt;&lt; refresh" 
+        onclick="{jsonrTestRefresh();}"
+        />
+    <p id="jsonrObjectError"></p>
+  </div>
+  <script src="protocols.js" type="text/javascript"></script>
+  <script src="jsonr.js" type="text/javascript"></script>
+  <script src="jsonrTest.js" type="text/javascript"></script>
+</body>
+</html>
