@@ -336,28 +336,35 @@ JSON.buffer = function (value, sb) {
         sb.push (value); return sb;
     case 'undefined': case 'function': case 'unknown':
         return sb;
-    case 'object': {
-        if (value == null) sb.push ("null");
+    case 'object':
+        if (value == null) 
+            sb.push ("null");
         else if (value.length == null) { // Object
             sb.push ('{');
             for (k in value) {
-                JSON.buffer (k, sb), sb.push (':'); 
-                JSON.buffer (value[k], sb); sb.push (',');
+                JSON.buffer (k, sb);
+                sb.push (':'); 
+                JSON.buffer (value[k], sb); 
+                sb.push (',');
                 }
             var last = sb.length-1;
-            if (sb[last] == ',') sb[last] = '}';
-            else sb[last] = '{}'
+            if (sb[last] == ',') 
+                sb[last] = '}';
+            else 
+                sb[last] = '{}';
         } else { // Array
             sb.push ('[');
             for (var i=0, L=value.length; i<L; i++) {
                 JSON.buffer (value[i], sb); sb.push (',')
                 }
             var last = sb.length-1;
-            if (sb[last] == ',') sb[last] = ']';
-            else sb[last] = '[]'
+            if (sb[last] == ',') 
+                sb[last] = ']';
+            else 
+                sb[last] = '[]';
         }
         return sb;
-    } default:
+    default:
         value = value.toString();
         sb.push ('"');
         if (/["\\\x00-\x1f]/.test(value)) 
@@ -411,7 +418,7 @@ JSON.HTML = function (value, sb, className) {
         break;
     case 'undefined': case 'function': case 'unknown':
         break;
-    case 'object': {
+    case 'object':
         if (value == null) 
             if (template) {
                 sb.push(template[0]);
@@ -427,7 +434,7 @@ JSON.HTML = function (value, sb, className) {
                 sb.push ('<div class="object">');
                 for (var k in value) {
                     sb.push('<div class="property"><span class="name">');
-                    sb.push(HTML.cdata (k)), 
+                    sb.push(HTML.cdata (k));
                     sb.push('</span>');
                     JSON.HTML (value[k], sb, k); 
                     sb.push ('</div>');
@@ -448,10 +455,12 @@ JSON.HTML = function (value, sb, className) {
             }
         }
         break;
-    } default:
-        sb.push(HTML.cdata(value.toString())); break;
+    default:
+        sb.push(HTML.cdata(value.toString())); 
+        break;
     }
-    if (template) sb.push(template[1]);
+    if (template) 
+        sb.push(template[1]);
     return sb;
 }
 JSON.timeout = 3000; // 3 seconds

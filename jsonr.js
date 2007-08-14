@@ -21,11 +21,11 @@ JSON.Regular.initialize = function (name, model, json, extensions) {
     this.json = json;
     this.extensions = extensions;
     this.errors = {};
-}
+};
 JSON.Regular.set = function (ns, v) {
-    eval("this.json" + ns + " = v;"); 
+    eval("this.json" + ns + " = v;"); // eval is Evil, unless it does Good
     return v;
-}
+};
 JSON.Regular.test = function (el, v) {
     this.set(el.id, v); 
     var s = v.toString();
@@ -33,13 +33,16 @@ JSON.Regular.test = function (el, v) {
         el.value = s; 
         this.error(el, v); 
     } else
-        setTimeout(this._this + '.onValid(' + el.id + ')', 10);
-}
+        setTimeout(this._this + '.onValid(' + JSON.encode(el.id) + ')', 10);
+};
 JSON.Regular.error = function (el, v) {
     setTimeout(
-        this._this + '.onInvalid(' + el.id + ', ' + JSON.string(v) + ')', 10
+        this._this + '.onInvalid(' 
+        + JSON.encode(el.id) + ', ' 
+        + JSON.encode(v) 
+        + ')', 10
         );
-}
+};
 JSON.Regular.Null = function (el) {
     var v; 
     try {
@@ -48,53 +51,53 @@ JSON.Regular.Null = function (el) {
         v = el.value;
     }
     this.set(el.id, v);
-}
+};
 JSON.Regular.Boolean = function (el) {
     this.set(el.id, el.checked);
-}
+};
 JSON.Regular.String = function (el) {
     this.set(el.id, el.value);
-}
+};
 JSON.Regular.Number = function (el) {
     this.test(el, parseFloat(el.value));
-}
+};
 JSON.Regular.Integer = function (el) {
     this.test(el, parseInt(el.value));
-}
+};
 JSON.Regular.Decimal = function (el, pow) {
     this.test(el, Math.round((parseFloat(el.value)*pow))/pow);
-}
+};
 JSON.Regular.PCRE = function (el, regular) {
     if (el.value.match(regular) == null) 
         this.error(el, el.value);
     else {
         this.set(el.id, el.value);
-        setTimeout(this._this + '.onValid(' + JSON.string(el.id) + ')', 1);
+        setTimeout(this._this + '.onValid(' + JSON.encode(el.id) + ')', 1);
     }
-}
+};
 JSON.Regular.FloatRange = function (el, lower, higher) {
     var v = parseFloat(el.value);
     if (v < lower) v = lower; 
     else if (v > higher) v = higher;
     this.test(el, v);
-}
+};
 JSON.Regular.IntegerRange = function (el, lower, higher) {
     var v = parseInt(el.value);
     if (v < lower) v = lower; 
     else if (v > higher) v = higher;
     this.test(el, v);
-}
+};
 JSON.Regular.DecimalRange = function (el, lower, higher, pow) {
     var v = Math.round((parseFloat(el.value)*pow))/pow;
     if (v < lower) v = lower;
     else if (v > higher) v = higher;
     this.test(el, v);
-}
+};
 JSON.Regular.htmlNull = function (sb, ns, nm, ob) {
     sb.push('<textarea class="null" name="');
-    sb.push(nm);
+    sb.push(HTML.cdata(nm));
     sb.push('" id="');
-    sb.push(ns.replace('"', '&quot;'));
+    sb.push(HTML.cdata(ns));
     sb.push('" onblur="{');
     sb.push(this._this);
     if (ob == null)
@@ -105,14 +108,14 @@ JSON.Regular.htmlNull = function (sb, ns, nm, ob) {
         sb.push("</textarea>");
     }
     return sb;
-} 
+};
 JSON.Regular.htmlBoolean = function (sb, ns, nm, ob) {
     sb.push('<input class="boolean" name="');
-    sb.push(nm);
+    sb.push(HTML.cdata(nm));
     sb.push('" id="');
-    sb.push(ns.replace('"', '&quot;'));
+    sb.push(HTML.cdata(ns));
     sb.push('" onclick="{');
-    sb.push(this._this);
+    sb.push(HTML.cdata(this._this));
     if (ob) {
         sb.push('.Boolean(this);}" type="checkbox" checked />');
         this.set(ns, true);
@@ -121,24 +124,24 @@ JSON.Regular.htmlBoolean = function (sb, ns, nm, ob) {
         this.set(ns, false);
     }
     return sb;
-}
+};
 JSON.Regular.htmlString = function (sb, ns, nm, ob) {
     sb.push('<textarea class="string" name="');
-    sb.push(nm);
+    sb.push(HTML.cdata(nm));
     sb.push('" id="');
-    sb.push(ns.replace('"', '&quot;'));
+    sb.push(HTML.cdata(ns));
     sb.push('" onblur="{');
-    sb.push(this._this);
+    sb.push(HTML.cdata(this._this));
     if (ob == null) {
         sb.push('.String(this);}"></textarea>');
         this.set(ns, "");
     } else {
         sb.push('.String(this);}">');
-        sb.push(ob);
+        sb.push(HTML.cdata(ob));
         sb.push("</textarea>");
     } 
     return sb;
-}
+};
 JSON.Regular.htmlNumber = function (sb, ns, nm, ob, pt) {
     var decimals = 0, s = pt.toString();
     sb.push('<input type="text" class="number"');
@@ -150,18 +153,18 @@ JSON.Regular.htmlNumber = function (sb, ns, nm, ob, pt) {
         sb.push(ob.toString());
         sb.push('" name="');
     }
-    sb.push(nm);
+    sb.push(HTML.cdata(nm));
     sb.push('" id="');
-    sb.push(ns.replace('"', '&quot;'));
+    sb.push(HTML.cdata(ns));
     if (pt == 0) {
         sb.push('" onblur="{');
-        sb.push(this._this);
+        sb.push(HTML.cdata(this._this));
         sb.push(".Number(this));}\" />");
     } else {
         sb.push('" size="');
         sb.push(pt.toString().length);
         sb.push('" onblur="{');
-        sb.push(this._this);
+        sb.push(HTML.cdata(this._this));
         if (parseInt(s)==pt) {
             sb.push(".IntegerRange(this");
         } else {
@@ -185,22 +188,22 @@ JSON.Regular.htmlNumber = function (sb, ns, nm, ob, pt) {
         sb.push(');}" />');
     }
     return sb;
-}
+};
 JSON.Regular.htmlPCRE = function (sb, ns, nm, ob, pt) {
     sb.push('<input name="');
-    sb.push(nm);
+    sb.push(HTML.cdata(nm));
     sb.push('" id="');
-    sb.push(ns.replace('"', '&quot;'));
+    sb.push(HTML.cdata(ns));
     sb.push('" onblur="{');
-    sb.push(this._this);
-    sb.push(".Regular(this, /");
+    sb.push(HTML.cdata(this._this));
+    sb.push(".PCRE(this, /");
     sb.push(pt);
     if (ob == null) {
         sb.push('/);}" type="text"');
         ob = this.set(ns, "");
     } else {
         sb.push('/);}" type="text" value="');
-        sb.push(ob);
+        sb.push(HTML.cdata(ob));
         sb.push('"');
     } 
     if (ob.match(new RegExp(pt))==null) {
@@ -209,70 +212,73 @@ JSON.Regular.htmlPCRE = function (sb, ns, nm, ob, pt) {
     } else
         sb.push('class="pcre" />');
     return sb;
-}
+};
 JSON.Regular.htmlCollection = function (sb, md, ns, nm, ob) {
     sb.push('<div class="collection" id="');
-    sb.push(ns.replace('"', '&quot;'));
+    sb.push(HTML.cdata(ns));
     sb.push('">');
     if (ob != null) for (var i=0, L=ob.length; i<L; i++) 
-        this.HTML(sb, md+"[0]", ns+"["+i+"]", nm);
+        this.htmlValue(sb, md+"[0]", ns+"["+i+"]", nm);
     sb.push('<span class="button" onclick="{');
-    sb.push(this._this);
+    sb.push(HTML.cdata(this._this));
     sb.push(".htmlAdd(this, &quot;");
-    sb.push(md);
+    sb.push(HTML.cdata(md));
     sb.push("&quot;, &quot;");
-    sb.push(ns.replace('"', '\&quot;'));
+    sb.push(HTML.cdata(ns));
     sb.push("&quot;, &quot;");
-    sb.push(nm);
+    sb.push(HTML.cdata(nm));
     sb.push("&quot;);}\" >add</span></div>");
     return sb;
-}
+};
 JSON.Regular.htmlRelation = function (sb, md, ns, nm, ob, pt) {
     sb.push('<div class="relation ');
-    sb.push(nm);
+    sb.push(HTML.cdata(nm));
     sb.push('" id="');
-    sb.push(ns.replace('"', '&quot;'));
+    sb.push(HTML.cdata(ns));
     sb.push('">');
     if (ob == null) ob = this.set(ns, []);
     for (var i=0, L=pt.length; i<L; i++) 
-        this.HTML(sb, md+"["+i+"]", ns+"["+i+"]", nm+i.toString());
+        this.htmlValue(sb, md+"["+i+"]", ns+"["+i+"]", nm+i.toString());
     sb.push("</div>");
     return sb;
-}
+};
 JSON.Regular.htmlDictionnary = function (sb, md, ns, k, v) {
     ;
-}
+};
 JSON.Regular.htmlNamespace = function (sb, md, ns, nm, ob, keys) {
     sb.push('<div class="object">');
     if (ob == null) {
         sb.push('<span class="object" onclick="{HTML.replace(this, ');
-        sb.push(this._this);
+        sb.push(HTML.cdata(this._this));
         sb.push(".htmlOpen([], &quot;");
-        sb.push(md);
+        sb.push(HTML.cdata(md));
         sb.push("&quot;, &quot;");
-        sb.push(ns.replace('"', '\&quot;'));
+        sb.push(HTML.cdata(ns));
         sb.push("&quot;).join(''));}\">open</span>");
     } else {
         for (var i=0; i<keys.length; i++) {
             k = keys[i];
             sb.push('<div class="');
-            HTML.encode(k, sb);
+            sb.push(HTML.cdata(k));
             sb.push('"><span class="key" /><span>');
-            this.HTML(sb, md + "['" + k + "']", ns + "['" + k + "']", k);
+            this.htmlValue(sb, md + "['" + k + "']", ns + "['" + k + "']", k);
             sb.push("</span></div>");
         }
     }
     sb.push("</div>");
     return sb;
-}
+};
+JSON.Regular.htmlFocus = function (id) {
+    $(id).focus();
+};
 JSON.Regular.htmlAdd = function (el, md, ns, nm) {
     var ob = eval("this.json" + ns);
     if (ob == null) ob = this.set(ns, []);
     var i = ob.length;
     var id = ns+"["+i+"]";
-    HTML.insert(this.htmlValue(
+    HTML.insert(el, this.htmlValue(
         [], md + "[0]", id, nm + i.toString()
-        ).join(''), "beforeEnd", el);
+        ).join(''), "beforeBegin");
     var pt = eval("this.model" + md + "[0]");
     if (typeof pt == "object" && ob != null) {
         if (pt.length == null) {
@@ -281,8 +287,10 @@ JSON.Regular.htmlAdd = function (el, md, ns, nm) {
         } else
             id += "[0]";
     }
-    setTimeout('{el=$(' + id + '); el.focus(); el.select();}', 10);
-}
+    setTimeout('{' + this._this + '.htmlFocus(' 
+        + JSON.encode(id) 
+        + ');}', 10);
+};
 JSON.Regular.htmlOpen = function (sb, md, ns, nm) {
     var pt = eval("this.model" + md);
     var ob = eval("this.json" + ns);
@@ -290,18 +298,20 @@ JSON.Regular.htmlOpen = function (sb, md, ns, nm) {
     var keys = [], k;
     for (k in pt) if (!(typeof pt[k]=="function")) keys.push(k);
     this.htmlNamespace(sb, md, ns, nm, ob, keys);
-    var id = JSON.string(md + "['" + keys[0] + "']");
-    setTimeout('{el=$(' + id + '); el.focus(); el.select();}', 10);
+    var id = JSON.encode(md + "['" + keys[0] + "']");
+    setTimeout('{' + this._this + '.htmlFocus(' 
+        + JSON.encode(id) 
+        + ');}', 10);
     return sb;
-}
+};
 JSON.Regular.htmlExtensions = {
     "yyyy-MM-ddTHH:mm:ss": function (sb, ns, nm, ob, pt) {
         ; // TODO: implement a DateTime pattern
     }
-}
-JSON.Regular.HTML = function (sb, md, ns, nm) {
-    var pt = eval("this.model" + (md || ""));
-    var ob = eval("this.json" + (ns || ""));
+};
+JSON.Regular.htmlValue = function (sb, md, ns, nm) {
+    var pt = eval("this.model" + md); // eval is Evil ...
+    var ob = eval("this.json" + ns); // ... unless it does Good
     switch (typeof pt) {
     case "boolean": 
         return this.htmlBoolean(sb, ns, nm, ob);
@@ -315,9 +325,10 @@ JSON.Regular.HTML = function (sb, md, ns, nm) {
             else if (typeof extension == "function")
                 return extension.apply(this, [sb, ns, nm, ob, pt]);
             else
-                return this.HTML(sb, "['" + pt + "']", ns, nm)
+                return this.htmlValue(sb, "['" + pt + "']", ns, nm)
         }
-    case "number":  return this.htmlNumber(sb, ns, nm, ob, pt);
+    case "number":  
+        return this.htmlNumber(sb, ns, nm, ob, pt);
     case "object":
         if (pt==null) 
             return this.htmlNull(sb, ns, nm, ob);
@@ -335,20 +346,23 @@ JSON.Regular.HTML = function (sb, md, ns, nm) {
         else
             return this.htmlRelation(sb, md, ns, nm, ob, pt);
     }
-}
+};
+JSON.Regular.view = function () {
+    return this.htmlValue([], "", "").join('');
+};
 JSON.Regular.onInvalid = function (id, v) {
     var el = $(id); 
-    HTML.classAdd(el, ['error']); 
+    CSS.add(el, ['error']); 
     if (!this.errors) {
         el.focus();
         el.select(); 
         this.errors[id] = true;
     }
-}
+};
 JSON.Regular.onValid = function (id) {
-    HTML.classRemove($(id), ['error']);
+    CSS.remove($(id), ['error']);
     if (this.errors[id] == true) delete this.errors[id];
-}
+};
 /**
  * <h3>Synopsis</h3>
  * 
@@ -356,7 +370,7 @@ JSON.Regular.onValid = function (id) {
  *var control = new Control("control", {
  *     "an": "", "object": 10.01 "model": [true, false]
  *     });
- *HTML.update($('view'), control.HTML());</pre>
+ *HTML.update($('view'), control.view());</pre>
  * 
  * <h3>Note About This Implementation</h3>
  * 
