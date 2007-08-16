@@ -26,8 +26,9 @@
     <li><a href="#bindAsEventListener"
     >bindAsEventListener (object, fun)</a></li>
     <li><a href="#Protocols">Protocols ()</a></li>
-    <li><a href="#Protocols.version"><em>Protocols.version</em></a></li>
-    <li><a href="#Protocols.onload"><em>Protocols.onload</em></a></li>
+    <li><a href="#Protocols.version">Protocols.version</a></li>
+    <li><a href="#Protocols.onload">Protocols.onload</a></li>
+    <li><a href="#Protocols.include">Protocols.include (url)</a></li>
   </ol>
   <p>
     A few convenient functions.
@@ -44,7 +45,12 @@
     continuation may be undefined.
   </p>
   <h3><a name="map" href="#">map (fun, list)</a></h3>
-  <pre>map(alert, ["1","2","3"]);</pre>
+  <p>
+    ... 
+  </p>
+  <pre
+    class="synopsis" onclick="eval_synopsis(this)"
+    >map(function(who){alert("Hello "+who);},[1,2,"World!"])</pre>
   <p>
     ... 
   </p>
@@ -94,13 +100,15 @@
   >bindAsEventListener (object, fun)</a></h3>
   <p>
     Bind an object as the first argument of a function that expects as
-    second argument an event, applied usually to attach an event lister
-    to an element of the document:
+    second argument an event. It is applied to bind a function to an
+    object and then attach it as an event listener to an element of the 
+    document.
   </p>
-  <pre id="bAEL_synopsis" class="synopsis" onclick="eval_synopsis(this);"
-    >$('bAEL_synopsis').onmouseout = <strong>bindAsEventListener(</strong>
+  <pre id="bindAsEvenListener_test" class="synopsis" onclick="eval_synopsis(this);"
+    >var listener = <strong>bindAsEventListener(</strong>
     {who: 'world!'}, function (event) {alert('hello ' + this.who);}
-    <strong>)</strong></pre>
+    <strong>);</strong>
+HTML.listen ($('bindAsEvenListener_test'), 'mouseout', listener);</pre>
   <p>
     Users of <code>prototype.js</code> should note that this implementation
     is somewhat simpler that the one coming with version 1.5.0 of their
@@ -162,6 +170,19 @@ world.hello();</pre>
     See <a 
     href="http://dean.edwards.name/weblog/2006/06/again/"
     >http://dean.edwards.name/weblog/2006/06/again/</a>.
+  <h3><a name="Protocols.include" href="#">Protocols.include (url, query)</a></h3>
+  <p>
+    Insert a new script reference to the given <code>url</code> in the 
+    page <code>&lt;HEAD&gt;</code>, effectively loading any JavaScript
+    objects and functions declared. If provided, a <code>query</code> object 
+    will be URL-encoded and added to the base <code>url</code> given.
+  </p>
+  <p>
+    This function is useful to selectively load JavaScript sources in 
+    different contexts. Note that common browsers support cross site 
+    scripting this way as many people find this to be more a feature than 
+    a security bug. 
+  </p>
 </div>
 <script src="protocols.js" type="text/javascript"></script>
 <script src="tests.js" type="text/javascript"></script>

@@ -1,4 +1,6 @@
-/*  Copyright(c) 2006-2007, Jack Slocum.
+/*  http://laurentszyster.be/protocols/index.html
+
+Copyright(c) 2006-2007, Jack Slocum.
 
     http://extjs.com/license.txt
 
@@ -34,20 +36,26 @@ function _ie_purge(d) {
 } // see http://javascript.crockford.com/memory/leak.html
 
 function pass() {}; // noop, nada, niks, rien.
-
-function map(fun, list) {
+function map (fun, list) {
     var r = [];
     for (var i=0, L=list.length; i<L; i++) 
         r.push(fun(list[i]));
     return r;
-}
-function filter(fun, list) {
-    var r = [];
-    for (var i=0, L=list.length; i<L; i++) 
-        if (fun(list[i]))
-            r.push(list[i]);
-    return r;
-} // a functional duo waiting for JavaScript 1.7 list comprehension
+};
+var filter = (function () {
+    if (Array.filter)
+        return function (fun, list) {
+            return list.filter(fun);
+        };
+    else
+        return function (fun, list) {
+            var r = [];
+            for (var i=0, L=list.length; i<L; i++) 
+                if (fun(list[i]))
+                    r.push(list[i]);
+            return r;
+        };
+})(); // a functional duo waiting for JavaScript 1.7 list comprehension
 
 function $(id) {
     return document.getElementById(id);
@@ -86,6 +94,11 @@ Protocols.onload = [];
     } else // IE is somehow supported ...
         document.onload = _onload;
 })(); // see http://dean.edwards.name/weblog/2006/06/again/
+Protocols.include = function (url, query) {
+    HTML.insert($$('head')[0], '<script ' + HTML.cdata(
+        (query == null) ? url : HTTP.formencode([url], query).join('')
+        ) + ' type="text/javascript" ></script>');
+};
 var HTTP = {requests: {}, pending: 0};
 HTTP.state = function (active) {
     var hourGlass = $('hourGlass');
@@ -114,7 +127,7 @@ HTTP.formencode = function (sb, query) {
     return sb;
 }
 HTTP.request = function (
-    method, url, headers, body, ok, error, except, timeout
+    method, url, headers, body, ok, error, timeout
     ) {
     var key = [method, url].join(' ');
     if (HTTP.requests[key]!=null) return null;
@@ -141,30 +154,43 @@ HTTP.request = function (
     req.open(method, url, true);
     for (var name in headers) 
         req.setRequestHeader(name, headers[name]);
-    req.onreadystatechange = HTTP.response(key, ok, error, except);
+    req.onreadystatechange = HTTP.response(key, ok, error);
     req.send(body);
     setTimeout('HTTP.timeout("' + key + '")', timeout || 3000);
     if (HTTP.pending == 0) HTTP.state(true);
     HTTP.pending++;
     return key;
 }
-HTTP.response = function (key, ok, error, except) {
+HTTP.observe = function (key, req) {}; // no need for observers and a loop.
+HTTP.response = function (key, ok, error) {
     return function onReadyStateChange () {
         var req = HTTP.requests[key];
-        try {
-            if (req.readyState == 4) {
-                HTTP.requests[key] = null;
-                HTTP.pending--;
-                if (HTTP.pending == 0) HTTP.state(false);
-                if (req.status == 200) 
-                    try {ok (req.responseText);} 
-                    catch (e) {if (except) except(key, e);}
-                else if (error) 
-                    try {error (req.status, req.responseText);} 
-                    catch (e) {if (except) except(key, e);}
+        try {HTTP.observe(key, req);} catch (e) {}
+        if (req.readyState == 4) {
+            HTTP.requests[key] = null;
+            HTTP.pending--;
+            if (HTTP.pending == 0) HTTP.state(false);
+            try {
+                if (req.status == 200) {
+                    try {
+                        ok (req.responseText);} 
+                    catch (e) {
+                        HTTP.except(key, e.toString());
+                    }
+                } else if (error) try {
+                    error (req.status, req.responseText);
+                } catch (e) {
+                    HTTP.except(key, e.toString());
+                }
+            } catch (e) { // request aborted
+                if (error) try {
+                    error (0, "");
+                } catch (e) {
+                    HTTP.except(key, e.toString());
+                };
             }
-        } catch (e) {if (except) except(key, e);}
-    } // It's the one obvious way to dispatch a responseText right!
+        }
+    }
 }
 HTTP.timeout = function (key) {
     try { // to trigger HTTP.requests[key].onreadystatechange() ...
@@ -176,6 +202,7 @@ HTTP.timeout = function (key) {
         delete HTTP.requests[key]; // ... and delete the request after.
     }
 }
+HTTP.except = function (key, message) {};
 
 var HTML = {}; // more conveniences for more applications for more ... 
 HTML._escaped = {'<': '&lt;', '>': '&gt;', '"': '&quot;', '&': '&amp;'};
@@ -201,17 +228,26 @@ HTML.input = function (elements, query) {
     }
     return query;
 }
-if (window.XMLHttpRequest) { // Mozilla, Safari, ...
-    HTML.listen = function (element, type, listener) {
-        element.addEventListener(type, listener, false);
-    };
-    HTML.text = function (element) {return element.textContent;}
-} else { // IE ...
-    HTML.listen = function (element, type, listener) {
-        element.attachEvent("on" + type, listener);
-    }; 
-    HTML.text = function (element) {return element.innerText;}
-}
+HTML.listen = (function () {
+    if (window.XMLHttpRequest) // Mozilla, Safari, ...
+        return function (element, type, listener) {
+            element.addEventListener(type, listener, false);
+        };
+    else // IE ...
+        return function (element, type, listener) {
+            element.attachEvent("on" + type, listener);
+        };
+})();
+HTML.text = (function () {
+    if (window.XMLHttpRequest) // Mozilla, Safari, ...
+        return function (element) {
+            return element.textContent;
+        };
+    else // IE ...
+        return function (element) {
+            return element.innerText;
+        }; 
+})();
 HTML.update = function (element, html) {
     if (element.innerHTML!=null) { // Everybody's fast hack
         _ie_purge (element);
@@ -253,13 +289,14 @@ HTML.insert = function (element, html, adjacency) {
     } else {  // DOM standard
         range = element.ownerDocument.createRange();
     } // Prototype's complicated Insertion untwisted ;-)
+    var i, L;
     switch (adjacency) {
     case 'beforeBegin':
         if (range!=null) {
             range.setStartBefore(element); // ... Mozilla only
             fragments = [range.createContextualFragment(html)];
         }
-        for (var i=0, L=fragments.length; i<L; i++)
+        for (i=0, L=fragments.length; i<L; i++)
             element.parentNode.insertBefore(fragments[i], element);
         break;
     case 'afterBegin':
@@ -268,7 +305,7 @@ HTML.insert = function (element, html, adjacency) {
             range.collapse(true);
             fragments = [range.createContextualFragment(html)];
         }
-        for (var i=fragments.length-1; i>-1; i--)
+        for (i=fragments.length-1; i>-1; i--)
             element.insertBefore(fragments[i], element.firstChild)
         break;
     case 'beforeEnd':
@@ -277,7 +314,7 @@ HTML.insert = function (element, html, adjacency) {
             range.collapse(element);
             fragments = [range.createContextualFragment(html)];
         }
-        for (var i=0, L=fragments.length; i<L; i++)
+        for (i=0, L=fragments.length; i<L; i++)
               element.appendChild(fragments[i]);
         break;
     case 'afterEnd':
@@ -285,7 +322,7 @@ HTML.insert = function (element, html, adjacency) {
             range.setStartAfter(element);
             fragments = [range.createContextualFragment(html)];
         }
-        for (var i=0, L=fragments.length; i<L; i++)
+        for (i=0, L=fragments.length; i<L; i++)
             element.parentNode.insertBefore(
                 fragments[i], element.nextSibling
                 );
@@ -293,6 +330,11 @@ HTML.insert = function (element, html, adjacency) {
 }
 HTML.bind = function (element, type, listener) {
     HTML.listen(element, type, bindAsEventListener(element, listener));
+}
+HTML.parse = function (text) {
+    var el = document.createElement('div');
+    HTML.update(el, text);
+    return el.childNodes[0];
 }
 
 var JSON = {}
@@ -320,7 +362,7 @@ JSON.decode = function (string) {
         throw new SyntaxError("parseJSON");
     }
 }
-JSON.buffer = function (value, sb) {
+JSON.buffer = function (sb, value) {
     switch (typeof value) {
     case 'string':
         sb.push ('"');
@@ -331,9 +373,11 @@ JSON.buffer = function (value, sb) {
         sb.push ('"');
         return sb;
     case 'number':
-        sb.push (isFinite(value) ? value : "null"); return sb;
+        sb.push (isFinite(value) ? value : "null"); 
+        return sb;
     case 'boolean':
-        sb.push (value); return sb;
+        sb.push (value); 
+        return sb;
     case 'undefined': case 'function': case 'unknown':
         return sb;
     case 'object':
@@ -342,26 +386,26 @@ JSON.buffer = function (value, sb) {
         else if (value.length == null) { // Object
             sb.push ('{');
             for (k in value) {
-                JSON.buffer (k, sb);
+                JSON.buffer (sb, k);
                 sb.push (':'); 
-                JSON.buffer (value[k], sb); 
+                JSON.buffer (sb, value[k]); 
                 sb.push (',');
                 }
-            var last = sb.length-1;
-            if (sb[last] == ',') 
-                sb[last] = '}';
-            else 
-                sb[last] = '{}';
+            if (sb.pop() == '{') 
+                sb.push('{}');
+            else {
+                sb.push('}');
+            }
         } else { // Array
             sb.push ('[');
             for (var i=0, L=value.length; i<L; i++) {
-                JSON.buffer (value[i], sb); sb.push (',')
+                JSON.buffer (sb, value[i]); 
+                sb.push (',')
                 }
-            var last = sb.length-1;
-            if (sb[last] == ',') 
-                sb[last] = ']';
+            if (sb.pop() == '[') 
+                sb.push('[]');
             else 
-                sb[last] = '[]';
+                sb.push(']');
         }
         return sb;
     default:
@@ -376,12 +420,12 @@ JSON.buffer = function (value, sb) {
     }
 }
 JSON.encode = function (value) {
-    return JSON.buffer(value, []).join('');
+    return JSON.buffer([], value).join('');
 }
 JSON.templates = {} // {'class': ['before', 'after']}
-JSON.HTML = function (value, sb, className) {
+JSON.HTML = function (sb, value, name) {
     var t = typeof value;
-    var template = (JSON.templates[className] || JSON.templates[t]);
+    var template = (JSON.templates[name] || JSON.templates[t]);
     switch (t) {
     case 'string':
         if (template) {
@@ -428,7 +472,7 @@ JSON.HTML = function (value, sb, className) {
         else if (value.length == null) { // Object
             if (template) {
                 sb.push (template[0]);
-                for (var k in value) JSON.HTML (value[k], sb, k); 
+                for (var k in value) JSON.HTML (sb, value[k], k); 
                 sb.push (template[1]);
             } else {
                 sb.push ('<div class="object">');
@@ -436,7 +480,7 @@ JSON.HTML = function (value, sb, className) {
                     sb.push('<div class="property"><span class="name">');
                     sb.push(HTML.cdata (k));
                     sb.push('</span>');
-                    JSON.HTML (value[k], sb, k); 
+                    JSON.HTML (sb, value[k], k); 
                     sb.push ('</div>');
                     }
                 sb.push('</div>');
@@ -445,12 +489,12 @@ JSON.HTML = function (value, sb, className) {
             if (template) {
                 sb.push(template[0]);
                 for (var i=0, L=value.length; i<L; i++) 
-                    JSON.HTML(value[i], sb, className)
+                    JSON.HTML(sb, value[i], name)
                 sb.push(template[1]);
             } else {
                 sb.push('<div class="array">');
                 for (var i=0, L=value.length; i<L; i++) 
-                    JSON.HTML(value[i], sb, className)
+                    JSON.HTML(sb, value[i], name)
                 sb.push('</div>');
             }
         }
@@ -462,6 +506,10 @@ JSON.HTML = function (value, sb, className) {
     if (template) 
         sb.push(template[1]);
     return sb;
+}
+JSON.view = function (values) {
+    for (var key in values) if ($(key) != null && values[key] != null)
+        HTML.update($(key), JSON.HTML([], values[key], key).join(''));
 }
 JSON.timeout = 3000; // 3 seconds
 JSON.errors = {};
@@ -494,7 +542,7 @@ JSON.POST = function (url, payload, ok, headers, timeout) {
             };
     }
     return HTTP.request(
-        'POST', url, headers, JSON.buffer (payload, []).join (''), ok, 
+        'POST', url, headers, JSON.buffer ([], payload).join (''), ok, 
         function (status, text) {
             (JSON.errors[status.toString()]||pass)(url, payload, text);
         }, 
@@ -504,36 +552,34 @@ JSON.POST = function (url, payload, ok, headers, timeout) {
 }
 JSON.update = function (id) {
     if (id == null)
-       return function (text) {
-            var json = JSON.decode(text);
-            for (var key in json)
-                HTML.update($(key), JSON.HTML(json[key], []).join(''));
+        return function (text) {
+            JSON.view(JSON.decode(text));
         }
     return function (text) {
-        HTML.update($(id), JSON.HTML(JSON.decode(text), []).join(''));
+        HTML.update($(id), JSON.HTML([], JSON.decode(text), name).join(''));
     }
 }
-JSON.insert = function (adjacency, id) {
+JSON.insert = function (adjacency, id, name) {
     return function (text) {
         HTML.insert($(id), JSON.HTML(
-            JSON.decode(text), []
+            [], JSON.decode(text), name
             ).join(''), adjacency);
     }
 }
-JSON.extend = function (adjacency, id) {
+JSON.extend = function (adjacency, id, name) {
     return function (text) {
         var json = JSON.decode(text);
         if (typeof json == 'object' && json.length) {
             var sb = [];
             if (adjacency == 'beforeEnd' || adjacency == 'beforeBegin') 
                 for (var i=0, L=json.length; i<L; i++)
-                    JSON.HTML(json[i], sb);
+                    JSON.HTML(sb, json[i], name);
             else (adjacency == 'afterBegin' || adjacency == 'afterEnd')
                 for (var i=json.length-1; i>-1; i--)
-                    JSON.HTML(json[i], sb);
+                    JSON.HTML(sb, json[i], name);
             HTML.insert($(id), sb.join(''), adjacency);
         } else 
-            HTML.insert($(id), JSON.HTML(json, []).join(''), adjacency);
+            HTML.insert($(id), JSON.HTML([], json, name).join(''), adjacency);
     }
 }
 

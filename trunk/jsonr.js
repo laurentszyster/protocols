@@ -14,6 +14,87 @@ You should have received a copy of the GNU General Public License
 along with this library; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
  
+JSON.pprint = function (sb, value, indent) {
+    switch (typeof value) {
+    case 'string': case 'number': case 'boolean':
+        return JSON.buffer(sb, value);
+    case 'undefined': case 'function': case 'unknown':
+        return sb;
+    case 'object':
+        if (value == null) 
+            sb.push ("null");
+        else if (value.length == null) { // Object
+            sb.push ('{');
+            if (indent) {
+                indent += '  ';
+            } else
+                indent = '\r\n  ';
+            for (k in value) {
+                sb.push (indent);
+                JSON.buffer (sb, k);
+                sb.push (': '); 
+                JSON.pprint (sb, value[k], indent); 
+                sb.push (',');
+                }
+            if (sb.pop() == '{') 
+                sb.push('{}');
+            else {
+                sb.push(indent);
+                sb.push('}');
+            }
+        } else { // Array
+            var flat = true;
+            var v, i, L=value.length;
+            for (i=0; i<L; i++) {
+                v = value[i];
+                if (v !== null && (typeof v) == 'object') {
+                    flat = false;
+                    break;
+                }
+            }
+            if (flat) {
+                sb.push ('[');
+                for (i=0; i<L; i++) {
+                    JSON.buffer (sb, value[i]); 
+                    sb.push (', ');
+                }
+                if (sb.pop() == '[') {
+                    sb.push('[]');
+                } else {
+                    sb.push(']');
+                }
+            } else {
+                if (indent) {
+                    indent += '  ';
+                } else
+                    indent = '\r\n  ';
+                sb.push ('[');
+                for (i=0; i<L; i++) {
+                    sb.push (indent);
+                    JSON.pprint (sb, value[i], indent); 
+                    sb.push (',');
+                }
+                if (sb.pop() == '[') {
+                    sb.push('[]');
+                } else {
+                    sb.push(indent);
+                    sb.push(']');
+                }
+            }
+        }
+        return sb;
+    default:
+        value = value.toString();
+        sb.push ('"');
+        if (/["\\\x00-\x1f]/.test(value)) 
+            sb.push(value.replace(/([\x00-\x1f\\"])/g, JSON._escape));
+        else
+            sb.push(value);
+        sb.push ('"');
+        return sb;
+    }
+}
+ 
 JSON.Regular = {}
 JSON.Regular.initialize = function (name, model, json, extensions) {
     this._this = name;
@@ -219,7 +300,7 @@ JSON.Regular.htmlCollection = function (sb, md, ns, nm, ob) {
     sb.push('">');
     if (ob != null) for (var i=0, L=ob.length; i<L; i++) 
         this.htmlValue(sb, md+"[0]", ns+"["+i+"]", nm);
-    sb.push('<span class="button" onclick="{');
+    sb.push('<input type="button" onclick="{');
     sb.push(HTML.cdata(this._this));
     sb.push(".htmlAdd(this, &quot;");
     sb.push(HTML.cdata(md));
@@ -227,7 +308,7 @@ JSON.Regular.htmlCollection = function (sb, md, ns, nm, ob) {
     sb.push(HTML.cdata(ns));
     sb.push("&quot;, &quot;");
     sb.push(HTML.cdata(nm));
-    sb.push("&quot;);}\" >add</span></div>");
+    sb.push('&quot;);}" value="add" /></div>');
     return sb;
 };
 JSON.Regular.htmlRelation = function (sb, md, ns, nm, ob, pt) {
@@ -256,11 +337,15 @@ JSON.Regular.htmlNamespace = function (sb, md, ns, nm, ob, keys) {
         sb.push(HTML.cdata(ns));
         sb.push("&quot;).join(''));}\">open</span>");
     } else {
+        var k, c;
         for (var i=0; i<keys.length; i++) {
             k = keys[i];
+            c = HTML.cdata(k);
             sb.push('<div class="');
-            sb.push(HTML.cdata(k));
-            sb.push('"><span class="key" /><span>');
+            sb.push(c);
+            sb.push('"><span class="name">');
+            sb.push(c);
+            sb.push('</span><span>');
             this.htmlValue(sb, md + "['" + k + "']", ns + "['" + k + "']", k);
             sb.push("</span></div>");
         }
