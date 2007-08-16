@@ -20,13 +20,16 @@
   </div>
   <h2>Hypertext Transfer Protocol(HTTP)</h2>
   <ol>
-    <li><a href="#HTTP.requests"><em>requests</em></a></li>
-    <li><a href="#HTTP.pending"><em>pending</em></a></li>
-    <li><a href="#HTTP.state">state (active)</a></li>
+    <li><a href="#HTTP.requests">requests</a></li>
+    <li><a href="#HTTP.pending">pending</a></li>
     <li><a href="#HTTP.fieldencode">fieldencode (string)</a></li>
     <li><a href="#HTTP.formencode">formencode (object)</a></li>
     <li><a href="#HTTP.request"
-    >request (method, url, headers, body, ok, error, except, timeout)</a></li>
+    >request (method, url, headers, body, ok, error, timeout)</a></li>
+    <li><a href="#HTTP.response">response (key, ok, error)</a></li>
+    <li><a href="#HTTP.except">except (key, message)</a></li>
+    <li><a href="#HTTP.observe">observe (key, req)</a></li>
+    <li><a href="#HTTP.state">state (active)</a></li>
   </ol>
   <p>
     The <a 
@@ -39,8 +42,6 @@
   <p>
     The <code>HTTP</code> client maintains a dictionnary of request 
     objects, indexed by keys made of their HTTP method and URL requested.
-  </p>
-  <p> 
     This dictionnary acts as a filter to prevent redundant POST
     or GET requests to be submitted. It is usefull to inspect
     the current pending requests:
@@ -56,12 +57,13 @@ for (var k in <strong>HTTP.requests</strong>) alert(k);</pre>
   <p>
     Applications may also use <code>HTTP.requests</code> test the state of 
     a pending requests by name, something practical when the state inspector 
-    is out of the request original scope and cannot possibly have a reference 
-    to the request object.
+    is independant from the request original scope and cannot possibly have 
+    a reference to the <code>XmlHttpRequest</code> object.
   </p>
+  <h3><a name="HTTP.pending" href="#"
+  >HTTP.pending</a></h3>
   <p>
-    This is probably not one of the most visible interface in this namespace
-    but you should be glad it exist and is used to do the right thing.
+    A count of the pending requests.
   </p>
   <h3><a name="HTTP.fieldencode" href="#"
   >HTTP.fieldencode (s)</a></h3>
@@ -74,9 +76,49 @@ for (var k in <strong>HTTP.requests</strong>) alert(k);</pre>
     ...
   </p>
   <h3><a name="HTTP.request" href="#"
-  >HTTP.request (method, url, headers, body, ok, error, except, timeout)</a></h3>
+  >HTTP.request (method, url, headers, body, ok, error, timeout)</a></h3>
   <p>
     ...
+  </p>
+  <h3><a name="HTTP.response" href="#"
+  >HTTP.response (key, ok, error)</a></h3>
+  <p>
+    Returns an <code>onReadyStateChange</code> function that resolves the
+    handled request by its key, calls <code>HTTP.observe(key, req)</code>, 
+    dispatch states between two the <code>ok(text)</code> and 
+    <code>error(code, text)</code> functions, eventually catching and thunking 
+    exceptions to <code>HTTP.exception</code>.
+  </p>
+  <p>
+    Application will not directly call <code>HTTP.response</code> but 
+    developpers should now what it does for them.
+  </p>
+  <h3><a name="HTTP.except" href="#"
+  >HTTP.except (key, message)</a></h3>
+  <p>
+    ...
+  </p>
+  <h3><a name="HTTP.observe" href="#"
+  >HTTP.observe (key, req)</a></h3>
+  <p>
+    Applications that need to monitor request progresses can replace this
+    method by their own observer. This aspect of a user interface is related 
+    to the visual display of all or some classes of requests but not 
+    individual requests. So, a single observer per page makes perfectly sense.
+  </p>
+  <h3><a name="HTTP.state" href="#"
+  >HTTP.state (active)</a></h3>
+  <p>
+    This method is called whenever the number of pending requests grows
+    from 0 to 1 or from 1 to 0, ie: when the client starts or stop beeing
+    active. By default it removes or adds the <code>hidden</code> CSS class
+    from the element identified as <code>hourGlass</code> in the page 
+    (obviously expecting the usual animation that symbolize a busy network
+    and a wait state).
+  </p>
+  <p>
+    Applications may replace it with more elaborate hour-glasses or use
+    this interface to implement network usage statistics for instance.
   </p>
 </div>
 <script src="protocols.js" type="text/javascript"></script>

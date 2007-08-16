@@ -1,6 +1,6 @@
 <html><!-- Copyright (C) 2007 Laurent A.V. Szyster - Copylef GPL 2.0 -->
 <head>
-  <title>protocols.js > HTML</title>
+  <title>protocols.js &gt; HTML</title>
   <link href="site.css" type="text/css" rel="stylesheet"></link>
   <link href="protocols.css" type="text/css" rel="stylesheet"></link>
   <script src="firebug.js" type="text/javascript"></script>
@@ -29,6 +29,7 @@
     <li><a href="#HTML.insert">insert (element, html, adjacency)</a></li>
     <li><a href="#HTML.bind">bind (element, type, fun)</a></li>
     <li><a href="#HTML.listen">listen (element, type, fun)</a></li>
+    <li><a href="#HTML.parse">parse (text)</a></li>
   </ol>
   <p>
     Learning and depending on every <a 
@@ -56,7 +57,7 @@
   </p>
   <pre
     class="synopsis" 
-    onclick="{HTML.update ($('html_cdata'), eval_synopsis(this));}" 
+    onclick="{HTML.update($('html_cdata'), eval_synopsis(this));}" 
     >HTML.cdata('&lt;tag name=&quot;value&quot; /&gt;')</pre>
   <div id="html_cdata" class="test">...</div>
   <p>
@@ -137,6 +138,13 @@
   <div id="html_listen_foobar" class="test">
     Click here to send an event to the attached listener.
   </div>
+  <h3><a name="HTML.parse" href="#"
+  >HTML.parse (text)</a></h3>
+  <p>
+    Parse an (X)HTML text string and return a DOM element node.
+  </p>
+  <pre class="synospis" onclick="eval_synopsis(this);"
+    >alert(HTML.text(HTML.parse('&lt;span&gt;test&lt;/span&gt;')));</pre>
 </div>
 <script src="protocols.js" type="text/javascript"></script>
 <script src="tests.js" type="text/javascript"></script>

@@ -18,45 +18,44 @@
   </div>
   <h2>JavaScript Object Notation (JSON)</h2>
   <ol>
-    <li><a href="#JSON.templates"><em>templates</em></a></li>
-    <li><a href="#JSON.timeout"><em>timeout</em></a></li>
-    <li><a href="#JSON.errors"><em>errors</em></a></li>
     <li><a href="#JSON.decode">decode (string)</a></li>
-    <li><a href="#JSON.buffer">buffer (object, sb)</a></li>
-    <li><a href="#JSON.encode">encode (object)</a></li>
-    <li><a href="#JSON.HTML">HTML (object, sb, className)</a></li>
-    <li><a href="#JSON.view">view (object, className)</a></li>
+    <li><a href="#JSON.buffer">buffer (sb, value)</a></li>
+    <li><a href="#JSON.encode">encode (value)</a></li>
+    <li><a href="#JSON.templates">templates</a></li>
+    <li><a href="#JSON.HTML">HTML (sb, value, name)</a></li>
+    <li><a href="#JSON.view">view (values)</a></li>
+    <li><a href="#JSON.timeout">timeout</a></li>
+    <li><a href="#JSON.errors">errors</a></li>
     <li><a href="#JSON.GET">GET (url, query, ok, headers, timeout)</a></li>
     <li><a href="#JSON.POST">POST (url, object, ok, headers, timeout)</a></li>
-    <li><a href="#JSON.update">update (id)</a></li>
-    <li><a href="#JSON.insert">insert (id, adjacency)</a></li>
-    <li><a href="#JSON.extend">extend (id, adjacency)</a></li>
+    <li><a href="#JSON.update">update (id, name)</a></li>
+    <li><a href="#JSON.insert">insert (id, adjacency, name)</a></li>
+    <li><a href="#JSON.extend">extend (id, adjacency, name)</a></li>
   </ol>
   <h3>Synopsis</h3>
-  <pre>JSON.GET('<a 
+  <pre
+    class="synopsis"
+    onclick="eval_synopsis(this)"
+    >JSON.GET('<a 
         href="hello-world.js"
         >hello-world.js</a>', null, JSON.update());</pre>
+  <div class="test">
+    Hello <span id="who">...</span>
+  </div>
   <p>
     By convention, CSS class names and HTML id attributes are
     used throughout the library to link JSON namespaces to HTML templates 
     and DOM elements.
   </p>
-  <div id="synopsis_templates" class="templates">
-    ...
-  </div>
+  <pre>&lt;div class=&quot;test&quot;&gt;
+  Hello &lt;span id=&quot;<strong>who</strong>&quot;&gt;...&lt;/span&gt;
+&lt;/div&gt;</pre>
   <p>
     Note how the source above acts as a substitute of traditionnal 
     server-side templates and how it can be supported for architectural 
     and demonstration purposes by a static JSON resource instead of an actual
     service controller (<code>hello-world.js</code>).
   </p>
-  <div class="test">
-    <a 
-      href="#" 
-      onclick="JSON.GET('hello-world.js', null, JSON.update());"
-      >hello</a>
-    <span id="who"><em class="who">...</em></span>
-  </div>
   <h3><a name="JSON.templates" href="#">JSON.templates</a></h3>
   <p>
     ...
@@ -73,22 +72,43 @@
   <p>
     ...
   </p>
-  <h3><a name="JSON.buffer" href="#">JSON.buffer (object, sb)</a></h3>
+  <h3><a name="JSON.buffer" href="#">JSON.buffer (sb, value)</a></h3>
   <p>
     ...
   </p>
-  <h3><a name="JSON.encode" href="#">JSON.encode (object)</a></h3>
+  <h3><a name="JSON.encode" href="#">JSON.encode (value)</a></h3>
   <p>
     ...
   </p>
-  <h3><a name="JSON.HTML" href="#">JSON.HTML (object, sb, className)</a></h3>
+  <h3><a name="JSON.HTML" href="#">JSON.HTML (sb, value, name)</a></h3>
   <p>
     ...
   </p>
-  <h3><a name="JSON.view" href="#">JSON.view (object, className)</a></h3>
+  <pre class="synopsis" onclick="eval_synopsis(this);"
+    >HTML.update($('json_html_test'), JSON.HTML ([], {
+    "Hello": "World!", 
+    "Give me": 5,
+    "bottles": [9, 99, 999],
+    "test": true
+    }, "json_html").join (''));</pre>
+  <div id="json_html_test" class="test">
+    ...
+  </div>
+  <h3><a name="JSON.view" href="#">JSON.view (values)</a></h3>
   <p>
     ...
   </p>
+  <pre class="synopsis" onclick="eval_synopsis(this);"
+    >JSON.view({
+    "Hello": "World!", 
+    "Give me": 5,
+    "bottles": [9, 99, 999],
+    "test": true
+    });</pre>
+  <div class="test">
+    <div><span id="bottles">...</span> bottles</div>
+    <div>Hello <span id="Hello">...</span></div>
+  </div>
   <h3><a name="JSON.GET" href="#"
   >JSON.GET (url, query, ok, headers, timeout)</a></h3>
   <p>

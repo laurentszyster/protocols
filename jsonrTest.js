@@ -23,7 +23,7 @@ function jsonrTestInterpret () {
 }
 
 function jsonrTestSerialize () {
-	$('jsonrString').value = JSON.encode(control.json);
+	$('jsonrString').value = JSON.pprint([], control.json).join ('');
 	hide('jsonrModelTab');
 	hide('jsonrViewTab');
 	show('jsonrObjectTab');

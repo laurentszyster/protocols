@@ -16,6 +16,24 @@
       >SVN</a>
   </div>
   <h2>Documentation</h2>
+  <p>
+    In so far as possible, each API is documented with an interactive 
+    synopsis that is executed when clicked and highlighted on hoover. 
+    For instance:
+  </p>
+  <pre class="synopsis" onclick="eval_synopsis(this)"
+    >alert('hello'); 
+HTML.update($('updated'), 'Hello World!');</pre>
+  <p>
+    Usually, those examples yield a simple message box with the result of a function.
+  </p>  
+  <div id="updated" class="test">
+    ...
+  </div>
+  <p>
+    Eventually the document parts updated by a synopsis are highlighted as above.
+  </p>
+  <h3>Application Programming Interfaces</h3>
   <ol>
     <li><a href="functions.html">Functions</a></li>
     <li><a href="HTTP.html">Hypertext Transfer Protocol (HTTP)</a></li>
@@ -23,24 +41,6 @@
     <li><a href="CSS.html">Cascading Style Sheets (CSS)</a></li>
     <li><a href="JSON.html">JavaScript Object Notation (JSON)</a></li>
   </ol>
-  <h3>Synopsis</h3>
-  <p>
-    In as far as possible, each interface is documented with an interactive 
-    test case that is executed when clicked, for instance:
-  </p>
-  <pre class="synopsis" onclick="eval_synopsis(this);"
-    >alert('hello'); 
-HTML.update($('updated'), 'Hello World!');</pre>
-  <p>
-    Usually, tests yield a simple message box with the result of a function.
-  </p>  
-  <div id="updated" class="test">
-    ...
-  </div>
-  <p>
-    When such test modify the page the document parts updated are highlighted 
-    as above.
-  </p>
 </div>
 <script src="protocols.js" type="text/javascript"></script>
 <script src="tests.js" type="text/javascript"></script>
