@@ -164,33 +164,26 @@ HTTP.request = function (
 HTTP.observe = function (key, req) {}; // no need for observers and a loop.
 HTTP.response = function (key, ok, error) {
     return function onReadyStateChange () {
-        var req = HTTP.requests[key];
+        var status = 0, req = HTTP.requests[key];
         try {HTTP.observe(key, req);} catch (e) {}
         try {
+            if (req.readyState > 2) status = req.status; 
             if (req.readyState == 4) {
                 HTTP.requests[key] = null;
                 HTTP.pending--;
                 if (HTTP.pending == 0) HTTP.state(false);
-                try {
-                    if (req.status == 200) {
-                        try {
-                            ok (req.responseText);
-                        } catch (e) {
-                            HTTP.except(key, e.toString());
-                        }
-                    } else if (error) try {
-                        error (req.status, req.responseText);
+                if (status == 200) {
+                    try {
+                        ok (req.responseText);
                     } catch (e) {
                         HTTP.except(key, e.toString());
                     }
-                } catch (e) { // request aborted
-                    if (error) try {
-                        error (0, "");
-                    } catch (e) {
-                        HTTP.except(key, e.toString());
-                    };
+                } else if (error) try {
+                    error (status, req.responseText);
+                } catch (e) {
+                    HTTP.except(key, e.toString());
                 }
-            } else if (req.responseText) {
+            } else if (status === 0 && req.responseText) {
                 try {
                     ok (req.responseText);
                 } catch (e) {
