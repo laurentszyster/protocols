@@ -155,10 +155,10 @@ HTTP.request = function (
     for (var name in headers) 
         req.setRequestHeader(name, headers[name]);
     req.onreadystatechange = HTTP.response(key, ok, error);
-    req.send(body);
-    setTimeout('HTTP.timeout("' + key + '")', timeout || 3000);
     if (HTTP.pending == 0) HTTP.state(true);
     HTTP.pending++;
+    setTimeout('HTTP.timeout("' + key + '")', timeout || 3000);
+    req.send(body);
     return key;
 }
 HTTP.observe = function (key, req) {}; // no need for observers and a loop.
@@ -166,32 +166,41 @@ HTTP.response = function (key, ok, error) {
     return function onReadyStateChange () {
         var req = HTTP.requests[key];
         try {HTTP.observe(key, req);} catch (e) {}
-        if (req.readyState == 4) {
-            HTTP.requests[key] = null;
-            HTTP.pending--;
-            if (HTTP.pending == 0) HTTP.state(false);
-            try {
-                if (req.status == 200) {
-                    try {
-                        ok (req.responseText);} 
-                    catch (e) {
+        try {
+            if (req.readyState == 4) {
+                HTTP.requests[key] = null;
+                HTTP.pending--;
+                if (HTTP.pending == 0) HTTP.state(false);
+                try {
+                    if (req.status == 200) {
+                        try {
+                            ok (req.responseText);
+                        } catch (e) {
+                            HTTP.except(key, e.toString());
+                        }
+                    } else if (error) try {
+                        error (req.status, req.responseText);
+                    } catch (e) {
                         HTTP.except(key, e.toString());
                     }
-                } else if (error) try {
-                    error (req.status, req.responseText);
+                } catch (e) { // request aborted
+                    if (error) try {
+                        error (0, "");
+                    } catch (e) {
+                        HTTP.except(key, e.toString());
+                    };
+                }
+            } else if (req.responseText) {
+                try {
+                    ok (req.responseText);
                 } catch (e) {
                     HTTP.except(key, e.toString());
                 }
-            } catch (e) { // request aborted
-                if (error) try {
-                    error (0, "");
-                } catch (e) {
-                    HTTP.except(key, e.toString());
-                };
             }
-        }
+        } catch (e) {HTTP.except(key, e.toString())}
     }
 }
+HTTP.except = function (key, message) {};
 HTTP.timeout = function (key) {
     try { // to trigger HTTP.requests[key].onreadystatechange() ...
         HTTP.requests[key].abort();
@@ -202,7 +211,6 @@ HTTP.timeout = function (key) {
         delete HTTP.requests[key]; // ... and delete the request after.
     }
 }
-HTTP.except = function (key, message) {};
 
 var HTML = {}; // more conveniences for more applications for more ... 
 HTML._escaped = {'<': '&lt;', '>': '&gt;', '"': '&quot;', '&': '&amp;'};
@@ -513,9 +521,8 @@ JSON.view = function (values) {
 }
 JSON.timeout = 3000; // 3 seconds
 JSON.errors = {};
-JSON.exceptions = [];
 JSON.GET = function (url, query, ok, headers, timeout) {
-    if (query != null)
+    if (query)
         var url = HTTP.formencode([url], query).join ('')
     if (headers) {
         headers['Accept'] = 'application/json, text/javascript';
@@ -523,11 +530,10 @@ JSON.GET = function (url, query, ok, headers, timeout) {
         headers = {'Accept': 'application/json, text/javascript'};
     }
     return HTTP.request(
-        'GET', url, headers, null, ok, 
+        'GET', url, headers, null, ok || JSON.update(), 
         function (status, text) {
             (JSON.errors[status.toString()]||pass)(url, query, text);
         }, 
-        function (e) {JSON.exceptions.push(e);}, 
         timeout || JSON.timeout
         );
 }
@@ -542,15 +548,15 @@ JSON.POST = function (url, payload, ok, headers, timeout) {
             };
     }
     return HTTP.request(
-        'POST', url, headers, JSON.buffer ([], payload).join (''), ok, 
+        'POST', url, headers, JSON.buffer ([], payload).join (''), 
+        ok || JSON.update(), 
         function (status, text) {
             (JSON.errors[status.toString()]||pass)(url, payload, text);
         }, 
-        function (e) {JSON.exceptions.push(e);}, 
         timeout || JSON.timeout
         );
 }
-JSON.update = function (id) {
+JSON.update = function (id, name) {
     if (id == null)
         return function (text) {
             JSON.view(JSON.decode(text));
