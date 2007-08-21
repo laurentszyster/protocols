@@ -20,41 +20,6 @@ PublicRDF.initialize = function (statements, indexes, routes) {
     this.indexes = indexes || {};
     this.routes = routes || {};
 }
-PublicRDF.articulateText = function (text, lang, context) {
-    if (lang == null || this.languages[lang] == null) 
-        return; // drop unknown language articulations when found!
-    this.statement (this.validate (
-        this.articulate(text, this.languages[lang], 0), {'': 0}
-        ), lang, text, context);
-}
-PublicRDF.articulateTexts = function (text, lang, context, chunk) {
-    if (lang == null || this.languages[lang] == null) 
-        return;
-    var chunks = this.articulate(text, lang, 0, [], chunk);
-    for (var i=0, L=chunks.length; i<L; i++) {
-        this.statement(chunks[i][0], lang, chunks[i][1], context)
-    }
-}
-PublicRDF.articulateHTML = function (element, lang, context, chunk) {
-    // TODO: override with the lang or xml:lang attribute of the element
-    if (lang == null || this.languages[lang] == null) 
-        throw "PNS error: undefined language.";
-    var children = element.childNodes;
-    if (children && children.length > 0) 
-        for (var i=0, L=children.length; i<L; i++)
-             this.articulateHTML(children[i], lang, context, chunk);
-    else
-        this.articulateTexts (element.textContent, lang, context, chunk);
-}
-PublicRDF.statement = function (subject, predicate, object, context) {
-    this.index (subject, context);
-    var subject_predicate = this.netunicodes([subject, predicate]);
-    var objects = this.statements[subject_predicate];
-    if (objects == null) 
-        this.statements[subject_predicate] = {context: object}; 
-    else 
-        objects[context] = (!object) ? "": object; // for questions too ;-)
-}
 PublicRDF.index = function (subject, context) {
     if (this.indexes[subject] == null) {
         var field = {'':0};
@@ -93,6 +58,41 @@ PublicRDF.index = function (subject, context) {
         // this.graph (context);
     }
 }
+PublicRDF.statement = function (subject, predicate, object, context) {
+    this.index (subject, context);
+    var subject_predicate = this.netunicodes([subject, predicate]);
+    var objects = this.statements[subject_predicate];
+    if (objects == null) 
+        this.statements[subject_predicate] = {context: object}; 
+    else 
+        objects[context] = (!object) ? "": object; // for questions too ;-)
+}
+PublicRDF.articulateText = function (text, lang, context) {
+    if (lang == null || this.languages[lang] == null) 
+        return; // drop unknown language articulations when found!
+    this.statement (this.validate (
+        this.articulate(text, this.languages[lang], 0), {'': 0}
+        ), lang, text, context);
+}
+PublicRDF.articulateTexts = function (text, lang, context, chunk) {
+    if (lang == null || this.languages[lang] == null)
+        return;
+    var chunks = this.articulate(text, lang, 0, [], chunk);
+    for (var i=0, L=chunks.length; i<L; i++) {
+        this.statement(chunks[i][0], lang, chunks[i][1], context)
+    }
+}
+PublicRDF.articulateHTML = function (element, lang, context, chunk) {
+    // TODO: override with the lang or xml:lang attribute of the element
+    if (lang == null || this.languages[lang] == null) 
+        throw "PNS error: undefined language.";
+    var children = element.childNodes;
+    if (children && children.length > 0) 
+        for (var i=0, L=children.length; i<L; i++)
+             this.articulateHTML(children[i], lang, context, chunk);
+    else
+        this.articulateTexts (HTML.text(element), lang, context, chunk);
+}
 PublicRDF.search = function(names) {
     // TODO: ...
 }
@@ -112,4 +112,4 @@ PublicRDF.insert = function(statement, adjacency) {
     // or end of its context ID.
 }
 
-var Metabase = Protocols ([PublicNames, PublicRDF]);
+var Metabase = Protocols (PublicNames, PublicRDF);

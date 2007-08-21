@@ -18,17 +18,23 @@ var PublicNames = {
     HORIZON: 126 // lower to limit CPU usage ?
 };
 PublicNames.netunicode = function (s, sb) {
-    sb.push(s.length); sb.push(":"); sb.push(s); sb.push(",");
+    sb.push(s.length); 
+    sb.push(":"); 
+    sb.push(s); 
+    sb.push(",");
 }
 /**
- * Encode an array of strings (or anything that [].join('') can join) into
+ * Encode an array of strings (or anything that be joined) into
  * netunicodes, return a string.
  */
 PublicNames.netunicodes = function (list) {
     var s, sb = [];
     for (var i=0; i < list.length; i++) {
         s=list[i]; 
-        sb.push(s.length); sb.push(":"); sb.push(s); sb.push(",");
+        sb.push(s.length); 
+        sb.push(":"); 
+        sb.push(s); 
+        sb.push(",");
     };
     return sb.join('');
 };
@@ -106,21 +112,29 @@ PublicNames.validate = function (names, field) {
         if (field[buffer] != null) continue;
         n = this.netunidecodes (buffer, null, true)
         if (n == null) {
-            valid.push(buffer); field[buffer] = true; field[''] += 1;
+            valid.push(buffer); 
+            field[buffer] = true; 
+            field[''] += 1;
         } else {
             s = this.validate (n, field);
             if (s != null) {
-                valid.push(s); field[s] = true; field[''] += 1;
+                valid.push(s); 
+                field[s] = true; 
+                field[''] += 1;
             }
         }
         if (field[''] > this.HORIZON) break;
     };
-    if (valid.length > 1) {valid.sort(); return this.netunicodes(valid);};
-    if (valid.length > 0) return valid[0];
+    if (valid.length > 1) {
+        valid.sort(); 
+        return this.netunicodes(valid);
+    };
+    if (valid.length > 0) 
+        return valid[0];
     return null;
 }
 PublicNames.languages = {
-    'SAT':[
+    SAT: [
         /\s*[?!.](?:\s+|$)/, // point, split sentences
         /\s*[:;](?:\s+|$)/, // split head from sequence
         /\s*,(?:\s+|$)/, // split the sentence articulations
@@ -154,7 +168,8 @@ PublicNames.articulate = function (
                 text = articulated[0];
         } else if (texts.length == 1 && texts[0].length > 0) 
             text = texts[0];
-        if (depth == bottom) return [text];
+        if (depth == bottom) 
+            return [text];
     }
     if (depth < bottom) 
         if (chunk == null) {
@@ -180,5 +195,6 @@ PublicNames.articulate = function (
                 } 
             } return chunks;
         }
-    else return articulated;
+    else 
+        return articulated;
 }
