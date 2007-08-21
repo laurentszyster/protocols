@@ -75,7 +75,6 @@ var Protocols = function () {
         }
     return f;
 } // the only OO convenience you need in JavaScript 1.5: 7 lines.
-Protocols.version = "0.40";
 Protocols.onload = [];
 (function () {
     var _onload = function () {
@@ -91,14 +90,17 @@ Protocols.onload = [];
                 _onload();
             }
         }, 10);
-    } else // IE is somehow supported ...
-        document.onload = _onload;
+    } else { // IE is somehow supported ...
+        // for Internet Explorer (using conditional comments)
+        document.write("<script id=__ie_onload defer src=javascript:void(0)><\/script>");
+        var script = document.getElementById("__ie_onload");
+        script.onreadystatechange = function() {
+            if (this.readyState == "complete") {
+                _onload(); // call the onload handler
+            }
+        };
+    }
 })(); // see http://dean.edwards.name/weblog/2006/06/again/
-Protocols.include = function (url, query) {
-    HTML.insert($$('head')[0], '<script ' + HTML.cdata(
-        (query == null) ? url : HTTP.formencode([url], query).join('')
-        ) + ' type="text/javascript" ></script>');
-};
 var HTTP = {requests: {}, pending: 0};
 HTTP.state = function (active) {
     var hourGlass = $('hourGlass');
@@ -108,24 +110,54 @@ HTTP.state = function (active) {
         else
             CSS.remove (hourGlass, ['wait']);
 }
-HTTP.fieldencode = function (s) {
-	var a = s.split("+");
-	for (var i=0, L=a.length; i<L; i++) {
-		a[i] = escape(a[i]);
-	}
-	return a.join("%2B");
-}
-HTTP.formencode = function (sb, query) {
-    start = sb.length;
-    for (key in query) {
-        sb.push('&'); 
-        sb.push(HTTP.fieldencode(key));
-        sb.push('='); 
-        sb.push(HTTP.fieldencode(query[key].toString()));
-    }
-    if (sb.length - start > 1) sb[start] = '?';
-    return sb;
-}
+HTTP.urlencode = (function () {
+    var _encode = function (s) {
+    	var a = s.split("+");
+    	for (var i=0, L=a.length; i<L; i++) {
+    		a[i] = escape(a[i]);
+    	}
+    	return a.join("%2B");
+    };
+    return function (sb, query) {
+        var value, prefix, start = sb.length;
+        for (key in query) {
+            value = query[key];
+            if (value === null) {
+                sb.push('&'); 
+                sb.push(_encode(key));
+                continue;
+            }
+            switch (typeof value) {
+            case 'string': case 'number': case 'boolean':
+                sb.push('&'); 
+                sb.push(_encode(key));
+                sb.push('='); 
+                sb.push(_encode(value.toString()));
+                break;
+            case 'undefined': 
+                sb.push('&'); 
+                sb.push(_encode(key));
+                break;
+            case 'function': case 'unknown':
+                break;
+            case 'object':
+                if (value.length) {
+                    prefix = '&' + _encode(key) + '=';
+                    for (var i=0, L=value.length; i<L; i++) {
+                        sb.push(prefix);
+                        sb.push(_encode(value[i].toString()))
+                    }
+                    break;
+                }
+            default:
+                throw "query values must be String, Number, Boolean or Array";
+            }
+        }
+        if (sb.length > start) 
+            sb[start] = '?' + sb[start].substr(1);
+        return sb;
+    };
+})();
 HTTP.request = function (
     method, url, headers, body, ok, error, timeout
     ) {
@@ -174,25 +206,25 @@ HTTP.response = function (key, ok, error) {
                 if (HTTP.pending == 0) HTTP.state(false);
                 if (status == 200) {
                     try {
-                        ok (req.responseText);
+                        ok (req);
                     } catch (e) {
                         HTTP.except(key, e.toString());
                     }
                 } else if (error) try {
-                    error (status, req.responseText);
+                    error (status, req);
                 } catch (e) {
                     HTTP.except(key, e.toString());
                 }
             } else if (status === 0 && req.responseText) {
                 try {
-                    ok (req.responseText);
+                    ok (req);
                 } catch (e) {
                     HTTP.except(key, e.toString());
                 }
             }
-        } catch (e) {HTTP.except(key, e.toString())}
+        } catch (e) {}
     }
-}
+} // see http://www.quirksmode.org/blog/archives/2005/09/xmlhttp_notes_r_2.html
 HTTP.except = function (key, message) {};
 HTTP.timeout = function (key) {
     try { // to trigger HTTP.requests[key].onreadystatechange() ...
@@ -353,14 +385,14 @@ JSON._escape = function (a, b) {
     if (c) return c;
     c = b.charCodeAt();
     return '\\u00'+Math.floor(c/16).toString(16)+(c%16).toString(16);
-    }
+}
 JSON.decode = function (string) {
     try {
         if (/^("(\\.|[^"\\\n\r])*?"|[,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t])+?$/.
                 test(string))
             return eval('(' + string + ')');
     } catch (e) {
-        throw new SyntaxError("parseJSON");
+        throw new "JSON syntax error";
     }
 }
 JSON.buffer = function (sb, value) {
@@ -524,8 +556,8 @@ JSON.GET = function (url, query, ok, headers, timeout) {
     }
     return HTTP.request(
         'GET', url, headers, null, ok || JSON.update(), 
-        function (status, text) {
-            (JSON.errors[status.toString()]||pass)(url, query, text);
+        function (status, req) {
+            (JSON.errors[status.toString()]||pass)(url, query, req);
         }, 
         timeout || JSON.timeout
         );
@@ -543,31 +575,33 @@ JSON.POST = function (url, payload, ok, headers, timeout) {
     return HTTP.request(
         'POST', url, headers, JSON.buffer ([], payload).join (''), 
         ok || JSON.update(), 
-        function (status, text) {
-            (JSON.errors[status.toString()]||pass)(url, payload, text);
+        function (status, req) {
+            (JSON.errors[status.toString()]||pass)(url, payload, req);
         }, 
         timeout || JSON.timeout
         );
 }
 JSON.update = function (id, name) {
     if (id == null)
-        return function (text) {
-            JSON.view(JSON.decode(text));
+        return function (req) {
+            JSON.view(JSON.decode(req.responseText));
         }
-    return function (text) {
-        HTML.update($(id), JSON.HTML([], JSON.decode(text), name).join(''));
+    return function (req) {
+        HTML.update($(id), JSON.HTML(
+            [], JSON.decode(req.responseText), name
+            ).join(''));
     }
 }
 JSON.insert = function (adjacency, id, name) {
-    return function (text) {
+    return function (req) {
         HTML.insert($(id), JSON.HTML(
-            [], JSON.decode(text), name
+            [], JSON.decode(req.responseText), name
             ).join(''), adjacency);
     }
 }
 JSON.extend = function (adjacency, id, name) {
-    return function (text) {
-        var json = JSON.decode(text);
+    return function (req) {
+        var json = JSON.decode(req.responseText);
         if (typeof json == 'object' && json.length) {
             var sb = [];
             if (adjacency == 'beforeEnd' || adjacency == 'beforeBegin') 

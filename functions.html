@@ -24,12 +24,17 @@
     <li><a href="#bindAsEventListener"
     >bindAsEventListener (object, fun)</a></li>
     <li><a href="#Protocols">Protocols ()</a></li>
-    <li><a href="#Protocols.version">Protocols.version</a></li>
     <li><a href="#Protocols.onload">Protocols.onload</a></li>
-    <li><a href="#Protocols.include">Protocols.include (url)</a></li>
   </ol>
+  <h3>Synopsis</h3>
   <p>
-    A few convenient functions.
+    Protocols adds a few functions to the JavaScript globals.
+    Three are simple functional tools - <code>pass</code>, <code>map</code> 
+    and <code>filter</code>, two are Prototype's widely adopted semantics -
+    <code>$</code> and <code>$$</code>, the last one is a convenience for
+    prototype mix-in that also serve as root for general purpose library
+    properties.
+     
   </p>
   <h3><a name="pass" href="#">pass ()</a></h3>
   <p>
@@ -43,20 +48,23 @@
     continuation may be undefined.
   </p>
   <h3><a name="map" href="#">map (fun, list)</a></h3>
-  <p>
-    ... 
-  </p>
   <pre
-    class="synopsis" onclick="eval_synopsis(this)"
-    >map(function(who){alert("Hello "+who);},[1,2,"World!"])</pre>
-  <p>
-    ... 
-  </p>
+    class="synopsis"
+    onclick="HTML.update($('functions_map'), JSON.encode(eval_synopsis(this)))"
+    >function double (what) {
+    return what + what;
+};
+<strong>map(</strong>double, [1,2,"World!"]<strong>)</strong>;</pre>
+  <div id="functions_map" class="test">...</div>
   <h3><a name="filter" href="#">filter (fun, list)</a></h3>
-  <pre>alert(JSON.encode(filter(pass, [1,2,3])));</pre>
-  <p>
-    ... 
-  </p>
+  <pre
+    class="synopsis" 
+    onclick="HTML.update($('functions_filter'), JSON.encode(eval_synopsis(this)))"
+    >function odd (number) {
+    return ((number % 2) != 0);
+}; 
+<strong>filter(</strong>odd, [0,1,2,3,4,5,6,7,8,9]<strong>)</strong>;</pre>
+  <div id="functions_filter" class="test">...</div>
   <h3><a name="$" href="#">$ (id)</a></h3>
   <p>
     Unless you are totally new to JavaScript you may (think you) know the
@@ -83,16 +91,9 @@
     return CSS.select(selector, element);
 }</pre>
   <p>
-    Note that this is Jack Slocum's practical implementation of <a 
-    href="http://www.w3.org/TR/css3-selectors/"
-    >CSS</a> and <a 
-    href="http://www.w3.org/TR/xpath"
-    >XPATH</a> selectors.
-  </p>
-  <p>
-    See: <a 
-    href="http://www.jackslocum.com/blog/2007/01/11/domquery-css-selector-basic-xpath-implementation-with-benchmarks/"
-    >DOMQuery</a> for more information.
+    See: <code><a 
+    href="CSS.html#CSS.select"
+    >CSS.select</a></code> for more information.
   </p>
   <h3><a name="bindAsEventListener" href="#"
   >bindAsEventListener (object, fun)</a></h3>
@@ -136,53 +137,33 @@ world.hello();</pre>
   <p>
     Elaborate object protocols are possible in JavaScript, this is just a 
     functional convenience <em>for</em> JavaScript.
-    To mix object properties in a new JavaScript prototype,
-    this function requires a constructor named <code>initialize</code> from 
+    This function expects a constructor named <code>initialize</code> from 
     one of the protocols mixed in, supports composition only and resolves
-    name conflict simply: the last interface mixed-in override the previous 
-    one.
+    name conflict simply: the last interface mixed-in overrides the previous 
+    one(s).
   </p>
-  <p>  
-    Trying to implement another object protocol than the one allready 
-    provided by the interpreter would be bound to failure: the one available 
-    is perhaps one of the best possible in theory and certainly the best 
-    one possible in practice.
-  </p>
-  <h3><a name="Protocols.version" href="#">Protocols.version</a></h3>
-  <p>
-    As a global instance, the <code>Protocols</code> function also provides
-    a convenient place to hold the library variables, to start with its
-    version number.
-  </p>
-  <pre 
-    class="synopsis" onclick="eval_synopsis(this);"
-    >alert(Protocols.version);</pre>
   <h3><a name="Protocols.onload" href="#">Protocols.onload</a></h3>
   <p>
     The <code>onload</code> property of <code>Protocols</code> is an array
     of functions that will be called once the HTML page is ready but before
     any linked resources have been loaded.
   </p>
-  <pre>Protocols.onload.push(function(){alert('ready');})</pre>
+  <pre>Protocols.onload.push(function(){
+    var hover = ['hover'];
+    map(function(el){
+        HTML.listen(el, 'mouseover', function(){CSS.add(el, hover);});
+        HTML.listen(el, 'mouseout', function(){CSS.remove(el, hover);});
+        }, $$('pre.synopsis'));
+    })</pre>
   <p>
     See <a 
     href="http://dean.edwards.name/weblog/2006/06/again/"
     >http://dean.edwards.name/weblog/2006/06/again/</a>.
-  <h3><a name="Protocols.include" href="#">Protocols.include (url, query)</a></h3>
-  <p>
-    Insert a new script reference to the given <code>url</code> in the 
-    page <code>&lt;HEAD&gt;</code>, effectively loading any JavaScript
-    objects and functions declared. If provided, a <code>query</code> object 
-    will be URL-encoded and added to the base <code>url</code> given.
-  </p>
-  <p>
-    This function is useful to selectively load JavaScript sources in 
-    different contexts. Note that common browsers support cross site 
-    scripting this way as many people find this to be more a feature than 
-    a security bug. 
   </p>
 </div>
 <script src="protocols.js" type="text/javascript"></script>
+<script src="publicnames.js" type="text/javascript"></script>
+<script src="publicrdf.js" type="text/javascript"></script>
 <script src="tests.js" type="text/javascript"></script>
 </body>
 </html>

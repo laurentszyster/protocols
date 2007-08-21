@@ -20,8 +20,7 @@
   <ol>
     <li><a href="#HTTP.requests">requests</a></li>
     <li><a href="#HTTP.pending">pending</a></li>
-    <li><a href="#HTTP.fieldencode">fieldencode (string)</a></li>
-    <li><a href="#HTTP.formencode">formencode (object)</a></li>
+    <li><a href="#HTTP.urlencode">urlencode (sb, query)</a></li>
     <li><a href="#HTTP.request"
     >request (method, url, headers, body, ok, error, timeout)</a></li>
     <li><a href="#HTTP.response">response (key, ok, error)</a></li>
@@ -29,11 +28,15 @@
     <li><a href="#HTTP.observe">observe (key, req)</a></li>
     <li><a href="#HTTP.state">state (active)</a></li>
   </ol>
+  <h3>Synopsis</h3>
   <p>
     The <a 
     href="http://tools.ietf.org/html/rfc2616"
     >HTTP</a> client provides reliable support accross browsers 
     for asynchronous requests with timeouts and without redundant submission.
+  </p>
+  <p>
+    ...
   </p>
   <h3><a name="HTTP.requests" href="#"
   >HTTP.requests</a></h3>
@@ -45,8 +48,8 @@
     the current pending requests:
   </p>
   <pre class="synopsis" onclick="eval_synopsis(this);"
-    >HTTP.request('GET', 'hello-world.js', {}, null, function (text) {
-    HTML.update($('http_response'), text);
+    >HTTP.request('GET', 'hello-world.js', {}, null, function (request) {
+    HTML.update($('http_response'), request.responseText);
     });
 for (var k in <strong>HTTP.requests</strong>) alert(k);</pre>
   <div id="http_response" class="test">
@@ -63,13 +66,18 @@ for (var k in <strong>HTTP.requests</strong>) alert(k);</pre>
   <p>
     A count of the pending requests.
   </p>
-  <h3><a name="HTTP.fieldencode" href="#"
-  >HTTP.fieldencode (s)</a></h3>
+  <h3><a name="HTTP.urlencode" href="#"
+  >HTTP.urlencode (sb, query)</a></h3>
   <p>
     ...
   </p>
-  <h3><a name="HTTP.formencode" href="#"
-  >HTTP.formencode (sb, query)</a></h3>
+  <pre
+    class="synopsis" 
+    onclick="{HTML.update($('http_urlencode'), eval_synopsis(this));}" 
+    ><strong>HTTP.urlencode(</strong>['/path'], {
+    "hello": "world", "test": [1, 2, true]
+    }<strong>)</strong>.join('')</pre>
+  <div class="test"><code id="http_urlencode">...</code></div>
   <p>
     ...
   </p>
