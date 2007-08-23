@@ -30,9 +30,7 @@
   </ol>
   <h3>Synopsis</h3>
   <p>
-    The <a 
-    href="http://tools.ietf.org/html/rfc2616"
-    >HTTP</a> client provides reliable support accross browsers 
+    This <code>HTTP</code> client provides reliable support accross browsers 
     for asynchronous requests with timeouts and without redundant submission.
   </p>
   <p>
@@ -83,34 +81,81 @@ for (var k in <strong>HTTP.requests</strong>) alert(k);</pre>
   </p>
   <h3><a name="HTTP.request" href="#"
   >HTTP.request (method, url, headers, body, ok, error, timeout)</a></h3>
-  <p>
+  <pre class="synopsis" onclick="eval_synopsis(this);"
+    >var body = HTTP.urlencode([], {
+    'hello': 'world', 'test': [1, 2.0, true]
+    }).join('');
+var ok = function (request) {
+    HTML.update($('http_response'), request.responseText);
+    };
+<strong>HTTP.request(</strong>'POST', 'hello-world.php', {
+    'Content-type': 'application/x-www-form-urlencoded'
+    }, body, ok<strong>)</strong>;</pre>
+  <div id="http_response" class="test">
     ...
+  </div>
+  <p>
+    <a 
+    href="http://tools.ietf.org/html/rfc2616"
+    >HTTP</a>
   </p>
   <h3><a name="HTTP.response" href="#"
   >HTTP.response (key, ok, error)</a></h3>
   <p>
-    Returns an <code>onReadyStateChange</code> function that resolves the
-    handled request by its key, calls <code>HTTP.observe(key, req)</code>, 
-    dispatch states between two the <code>ok(text)</code> and 
-    <code>error(code, text)</code> functions, eventually catching and thunking 
-    exceptions to <code>HTTP.exception</code>.
+    Application will never directly call <code>HTTP.response</code> but 
+    developpers should know what it does for them. And they may want to
+    substitute their own closure factory if needs be.
   </p>
   <p>
-    Application will not directly call <code>HTTP.response</code> but 
-    developpers should now what it does for them.
+    This one returns an <code>onReadyStateChange</code> function that resolves the
+    handled request by its key, calls <code>HTTP.<a 
+    href="#HTTP.observe"
+    >observe</a>(key, req)</code> on state 2, 3 and 4, 
+    dispatch completion states between two the <code>ok(text)</code> and 
+    <code>error(code, text)</code> functions, eventually catching and thunking 
+    to <code>HTTP.<a 
+    href="#HTTP.except"
+    >except</a></code> any exceptions throwed by the dispatched response 
+    handler.
+  </p>
+  <h3><a name="HTTP.observe" href="#"
+  >HTTP.observe (key, req)</a></h3>
+  <p>
+    Applications that need to monitor responses progress can replace this
+    method by their own event dispatcher. The one provided dispatches
+    state changes to a map of HTTP request observers.
+  </p>
+  <pre
+    class="synopsis"
+    ><strong
+    >HTTP.observe.rs[</strong>'GET hello-world.js'<strong
+    >]</strong> = function (state) {
+    switch (state) {
+    case(2): // request sent
+        ...
+    case(3): // response status and headers complete
+        ...
+    case(4): // response body complete
+        ...
+    }
+};</pre>
+  <p>
+    Note that only states 2, 3 and 4 are observed. Also, not all browsers 
+    can report when a request was sent (that is state 2). But common 
+    versions of IE, FireFox and Safari do.
+  </p>
+  <p>
+    Apparently there are <a 
+    href="http://www.quirksmode.org/blog/archives/2005/09/xmlhttp_notes_r_2.html"
+    >wide differences</a>  between all implementations of XMLHttpRequest state 
+    change. So it may be safer to consider that &quot;no browser correctly 
+    supports <code>readyState</code> in all cases&quot; and restrict 
+    applications to observe only the last two states.
   </p>
   <h3><a name="HTTP.except" href="#"
   >HTTP.except (key, message)</a></h3>
   <p>
     ...
-  </p>
-  <h3><a name="HTTP.observe" href="#"
-  >HTTP.observe (key, req)</a></h3>
-  <p>
-    Applications that need to monitor request progresses can replace this
-    method by their own observer. This aspect of a user interface is related 
-    to the visual display of all or some classes of requests but not 
-    individual requests. So, a single observer per page makes perfectly sense.
   </p>
   <h3><a name="HTTP.state" href="#"
   >HTTP.state (active)</a></h3>
