@@ -153,8 +153,11 @@ HTTP.urlencode = (function () {
                 throw "query values must be String, Number, Boolean or Array";
             }
         }
-        if (sb.length > start) 
-            sb[start] = '?' + sb[start].substr(1);
+        if (sb.length > start)
+            if (start === 0)
+                sb[start] = sb[start].substr(1);
+            else
+                sb[start] = '?' + sb[start].substr(1);
         return sb;
     };
 })();
@@ -183,46 +186,53 @@ HTTP.request = function (
         return null;
     }
     HTTP.requests[key] = req;
+    req.onreadystatechange = HTTP.response(key, ok, error);
     req.open(method, url, true);
     for (var name in headers) 
         req.setRequestHeader(name, headers[name]);
-    req.onreadystatechange = HTTP.response(key, ok, error);
     if (HTTP.pending == 0) HTTP.state(true);
     HTTP.pending++;
     setTimeout('HTTP.timeout("' + key + '")', timeout || 3000);
     req.send(body);
     return key;
 }
-HTTP.observe = function (key, req) {}; // no need for observers and a loop.
+HTTP.observe = function (key, state) {
+    (HTTP.observe.rs[key]||pass) (state);
+};
+HTTP.observe.rs = {}; // yeah, that's smart ;-)
 HTTP.response = function (key, ok, error) {
     return function onReadyStateChange () {
         var status = 0, req = HTTP.requests[key];
-        try {HTTP.observe(key, req);} catch (e) {}
-        try {
-            if (req.readyState > 2) status = req.status; 
-            if (req.readyState == 4) {
-                HTTP.requests[key] = null;
-                HTTP.pending--;
-                if (HTTP.pending == 0) HTTP.state(false);
-                if (status == 200) {
-                    try {
-                        ok (req);
-                    } catch (e) {
-                        HTTP.except(key, e.toString());
-                    }
-                } else if (error) try {
-                    error (status, req);
-                } catch (e) {
-                    HTTP.except(key, e.toString());
-                }
-            } else if (status === 0 && req.responseText) {
+        var state = req.readyState;
+        if (state > 1) try {
+            HTTP.observe(key, state);
+        } catch (e) {
+            HTTP.except(key, e.toString());
+        };
+        if (state > 2) 
+            status = req.status; 
+        if (state == 4) {
+            HTTP.requests[key] = null;
+            HTTP.pending--;
+            if (HTTP.pending == 0) HTTP.state(false);
+            if (status == 200) {
                 try {
                     ok (req);
                 } catch (e) {
                     HTTP.except(key, e.toString());
                 }
+            } else if (error) try {
+                error (status, req);
+            } catch (e) {
+                HTTP.except(key, e.toString());
             }
-        } catch (e) {}
+        } else if (status === 0 && req.responseText) { // Firefox only ?
+            try {
+                ok (req);
+            } catch (e) {
+                HTTP.except(key, e.toString());
+            }
+        }
     }
 } // see http://www.quirksmode.org/blog/archives/2005/09/xmlhttp_notes_r_2.html
 HTTP.except = function (key, message) {};
