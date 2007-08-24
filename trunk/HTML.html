@@ -51,34 +51,19 @@
     applications will. 
   </p>
   <h3><a name="HTML.cdata" href="#">HTML.cdata (string)</a></h3>
-  <p>
-    ...
-  </p>
   <pre
     class="synopsis" 
     onclick="{HTML.update($('html_cdata'), eval_synopsis(this));}" 
     >HTML.cdata('&lt;tag name=&quot;value&quot; /&gt;')</pre>
   <div id="html_cdata" class="test">...</div>
-  <p>
-    ...
-  </p>
   <h3><a name="HTML.text" href="#">HTML.text (element)</a></h3>
-  <p>
-    ...
-  </p>
   <pre
     class="synopsis" 
     onclick="{HTML.update ($('html_text'), eval_synopsis(this));}" 
     >HTML.text($$('ol')[0]);</pre>
   <div id="html_text" class="test">...</div>
-  <p>
-    ...
-  </p>
   <h3><a name="HTML.input" href="#"
   >HTML.input (elements, query)</a></h3>
-  <p>
-    ...
-  </p>
   <div class="test">
     <form>Hello <input name="hello" type="text" value="world" /> !</form>
   </div>
@@ -87,24 +72,27 @@
     onclick="{HTML.update ($('html_input'), JSON.encode(eval_synopsis(this)));}" 
     >HTML.input($$('form'), {});</pre>
   <div id="html_input" class="test">...</div>
-  <p>
-    ...
-  </p>
   <h3><a name="HTML.update" href="#"
   >HTML.update (element, html)</a></h3>
-  <p>
-    ...
-  </p>
+  <pre class="synopsis" onclick="{eval_synopsis(this);}" 
+    >HTML.update($('html_update'), 'Hello &lt;em&gt;update&lt;/em&gt;!');</pre>
+  <div id="html_update" class="test">...</div>
   <h3><a name="HTML.replace" href="#"
   >HTML.replace (element, html)</a></h3>
-  <p>
-    ...
-  </p>
+  <pre class="synopsis" onclick="{eval_synopsis(this);}" 
+    >HTML.update($('html_replace'), 'Hello &lt;em&gt;replace&lt;/em&gt;!');</pre>
+  <div id="html_replace" class="test">...</div>
   <h3><a name="HTML.insert" href="#"
   >HTML.insert (element, html, adjacency)</a></h3>
-  <p>
-    ...
-  </p>
+  <pre class="synopsis" onclick="{eval_synopsis(this);}" 
+    >HTML.insert($('html_insert'), '&lt;div&gt;up&lt;/div&gt;', 'beforeBegin');</pre>
+  <pre class="synopsis" onclick="{eval_synopsis(this);}" 
+    >HTML.insert($('html_insert'), '&lt;div&gt;top&lt;/div&gt;', 'afterBegin');</pre>
+  <pre class="synopsis" onclick="{eval_synopsis(this);}" 
+    >HTML.insert($('html_insert'), '&lt;div&gt;bottom&lt;/div&gt;', 'beforeEnd');</pre>
+  <pre class="synopsis" onclick="{eval_synopsis(this);}" 
+    >HTML.insert($('html_insert'), '&lt;div&gt;down&lt;/div&gt;', 'afterEnd');</pre>
+  <div id="html_insert" class="test">...</div>
   <h3><a name="HTML.bind" href="#"
   >HTML.bind (element, type, fun)</a></h3>
   <p>
