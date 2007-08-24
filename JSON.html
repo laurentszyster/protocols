@@ -31,22 +31,38 @@
     <li><a href="#JSON.extend">extend (id, adjacency, name)</a></li>
   </ol>
   <h3>Synopsis</h3>
-  <pre
-    class="synopsis"
-    onclick="eval_synopsis(this)"
-    >JSON.GET('<a 
-        href="hello-world.js"
-        >hello-world.js</a>');</pre>
-  <div class="test">
-    Hello <span id="who">...</span>
+  <p>
+    Easy things should be easy:
+  </p>
+  <div class="test" onclick="JSON.GET('hello-world.js')" >
+    Hello <span class="template" id="who"><json/></span>!
   </div>
+  <p>
+    Identify an element in the application's HTML
+    page and attach it a the most common event handler written in the simplest
+    and most readable way:
+  </p>
+  <pre>&lt;div class=&quot;test&quot; onclick=&quot;<strong
+  >JSON.GET('<a href="hello-world.js"
+  >hello-world.js</a>')</strong>&quot; &gt;
+  Hello &lt;span id=&quot;<strong>who</strong>&quot; &gt;...&lt;/span&gt;
+&lt;/div&gt;</pre>
+  <p>
+    On click get the JSON resource named <code>hello-world.js</code>.
+  </p>
+  <pre>{"<strong>who</strong>": "World"}</pre>
+  <p>
+    Update or extend the page with the response values
+  </p>
   <p>
     By convention, CSS class names and HTML id attributes are
     used throughout the library to link JSON namespaces to HTML templates 
     and DOM elements.
   </p>
-  <pre>&lt;div class=&quot;test&quot;&gt;
-  Hello &lt;span id=&quot;<strong>who</strong>&quot;&gt;...&lt;/span&gt;
+  <pre>&lt;div class=&quot;hidden&quot; id=&quot;<strong
+  >Protocols.JSON.templates</strong>&quot;&gt;
+  &lt;span class=&quot;<strong>who</strong>&quot;&gt;&lt;em&gt;<strong
+  >&lt;json/&gt;</strong>&lt;em&gt;&lt;/span&gt;
 &lt;/div&gt;</pre>
   <p>
     Note how the source above acts as a substitute of traditionnal 

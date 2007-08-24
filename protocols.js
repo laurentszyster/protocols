@@ -235,15 +235,20 @@ HTTP.response = function (key, ok, error) {
         }
     }
 } // see http://www.quirksmode.org/blog/archives/2005/09/xmlhttp_notes_r_2.html
-HTTP.except = function (key, message) {};
+HTTP.except = function (key, message) {
+    HTTP.except.ions.push(arguments);
+};
+HTTP.except.ions = []; // remove everything with HTTP.except = pass;
 HTTP.timeout = function (key) {
     try { // to trigger HTTP.requests[key].onreadystatechange() ...
         HTTP.requests[key].abort();
         HTTP.pending--;
         if (HTTP.pending == 0) HTTP.state(false);
-    } catch (e) {} // ... or pass.
+    } catch (e) {
+        HTTP.except(key, e.toString());
+    } // ... or pass.
     finally {
-        delete HTTP.requests[key]; // ... and delete the request after.
+        HTTP.requests[key] = null; // ... and delete the request after.
     }
 }
 

@@ -82,15 +82,19 @@ for (var k in <strong>HTTP.requests</strong>) alert(k);</pre>
   <h3><a name="HTTP.request" href="#"
   >HTTP.request (method, url, headers, body, ok, error, timeout)</a></h3>
   <pre class="synopsis" onclick="eval_synopsis(this);"
-    >var body = HTTP.urlencode([], {
-    'hello': 'world', 'test': [1, 2.0, true]
-    }).join('');
-var ok = function (request) {
+    >var <strong>form</strong> = {'hello': 'world', 'test': [1, 2.0, true]};
+var <strong>ok</strong> = function (request) {
     HTML.update($('http_response'), request.responseText);
     };
-<strong>HTTP.request(</strong>'POST', 'hello-world.php', {
+function <strong>error</strong> (status, request) {
+    alert (status);
+    }
+var key = <strong>HTTP.request(</strong>'POST', 'hello-world.php', {
     'Content-type': 'application/x-www-form-urlencoded'
-    }, body, ok<strong>)</strong>;</pre>
+    },  HTTP.urlencode([], {<strong
+    >form</strong>}).join(''), <strong
+    >ok</strong>, <strong
+    >error</strong>, 1000<strong>)</strong>;</pre>
   <div id="http_response" class="test">
     ...
   </div>
