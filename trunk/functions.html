@@ -148,13 +148,17 @@ world.hello();</pre>
     of functions that will be called once the HTML page is ready but before
     any linked resources have been loaded.
   </p>
-  <pre>Protocols.onload.push(function(){
+  <pre>Protocols.onload.push(function () {
     var hover = ['hover'];
-    map(function(el){
-        HTML.listen(el, 'mouseover', function(){CSS.add(el, hover);});
-        HTML.listen(el, 'mouseout', function(){CSS.remove(el, hover);});
-        }, $$('pre.synopsis'));
-    })</pre>
+    map(function (el) {
+        HTML.listen(el, 'mouseover', function () {
+            CSS.add(el, hover);
+        });
+        HTML.listen(el, 'mouseout', function () {
+            CSS.remove(el, /hover\s*/g);
+        });
+    }, $$('pre.synopsis'));
+});</pre>
   <p>
     See <a 
     href="http://dean.edwards.name/weblog/2006/06/again/"

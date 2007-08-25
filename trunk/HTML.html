@@ -80,7 +80,7 @@
   <h3><a name="HTML.replace" href="#"
   >HTML.replace (element, html)</a></h3>
   <pre class="synopsis" onclick="{eval_synopsis(this);}" 
-    >HTML.update($('html_replace'), 'Hello &lt;em&gt;replace&lt;/em&gt;!');</pre>
+    >HTML.replace($('html_replace'), 'Hello &lt;em&gt;replace&lt;/em&gt;!');</pre>
   <div id="html_replace" class="test">...</div>
   <h3><a name="HTML.insert" href="#"
   >HTML.insert (element, html, adjacency)</a></h3>
@@ -94,11 +94,11 @@
     >HTML.insert($('html_insert'), '&lt;div&gt;down&lt;/div&gt;', 'afterEnd');</pre>
   <div id="html_insert" class="test">...</div>
   <h3><a name="HTML.bind" href="#"
-  >HTML.bind (element, type, fun)</a></h3>
+  >HTML.bind (element, type, listener)</a></h3>
   <p>
     Bind a function to an element as a listener to event of a given type. 
   </p>
-  <pre class="synospis" onclick="eval_synopsis(this);"
+  <pre class="synopsis" onclick="eval_synopsis(this);"
     >HTML.bind($('html_bind_foobar'), 'click', function (event) {
     alert(this.innerHTML);
     return true;
@@ -111,18 +111,28 @@
     <code>element</code> it was binded to.
   </p>
   <h3><a name="HTML.listen" href="#"
-  >HTML.listen (element, type, fun)</a></h3>
+  >HTML.listen (element, type, listener)</a></h3>
+  <p>
+    Attach a bound or enclosed event listener to an HTML element. It is 
+    practical to attach a closure to each elements selected:
+  </p>
+  <pre class="synopsis" onclick="eval_synopsis(this);"
+    >map (function (element) {
+    HTML.listen(element, 'click', function () {
+        CSS.add (element, ['hidden']);
+        });
+    }, $$('pre.synopsis'));</pre>
   <p>
     ...
   </p>
-  <pre class="synospis" onclick="eval_synopsis(this);"
-    >HTML.listen($('html_listen_foobar'), 'click', bindAsEventListener (
+  <pre class="synopsis" onclick="eval_synopsis(this);"
+    >HTML.listen($('html_listen_bound'), 'click', bindAsEventListener (
     {"hello": "World!"}, function (event) {
         alert(JSON.encode(this));
         return true;
     }
     ));</pre>
-  <div id="html_listen_foobar" class="test">
+  <div id="html_listen_bound" class="test">
     Click here to send an event to the attached listener.
   </div>
   <h3><a name="HTML.parse" href="#"
@@ -130,7 +140,7 @@
   <p>
     Parse an (X)HTML text string and return a DOM element node.
   </p>
-  <pre class="synospis" onclick="eval_synopsis(this);"
+  <pre class="synopsis" onclick="eval_synopsis(this);"
     >alert(HTML.text(HTML.parse('&lt;span&gt;test&lt;/span&gt;')));</pre>
 </div>
 <script src="protocols.js" type="text/javascript"></script>
