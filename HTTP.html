@@ -18,21 +18,27 @@
   </div>
   <h2>Hypertext Transfer Protocol(HTTP)</h2>
   <ol>
+    <li><a href="#HTTP.timeout">timeout</a></li>
     <li><a href="#HTTP.requests">requests</a></li>
     <li><a href="#HTTP.pending">pending</a></li>
+    <li><a href="#HTTP.state">state (active)</a></li>
     <li><a href="#HTTP.urlencode">urlencode (sb, query)</a></li>
     <li><a href="#HTTP.request"
     >request (method, url, headers, body, ok, error, timeout)</a></li>
     <li><a href="#HTTP.response">response (key, ok, error)</a></li>
+    <li><a href="#HTTP.abort">abort (key)</a></li>
     <li><a href="#HTTP.except">except (key, message)</a></li>
-    <li><a href="#HTTP.observe">observe (key, req)</a></li>
-    <li><a href="#HTTP.state">state (active)</a></li>
+    <li><a href="#HTTP.observe">observe (state, req)</a></li>
   </ol>
   <h3>Synopsis</h3>
   <p>
     This <code>HTTP</code> client provides reliable support accross browsers 
     for asynchronous requests with timeouts and without redundant submission.
   </p>
+  <p>
+    ...
+  </p>
+  <h3><a name="HTTP.timeout" href="#">HTTP.timeout</a></h3>
   <p>
     ...
   </p>
@@ -50,9 +56,7 @@
     HTML.update($('http_response'), request.responseText);
     });
 for (var k in <strong>HTTP.requests</strong>) alert(k);</pre>
-  <div id="http_response" class="test">
-    ...
-  </div>
+  <div id="http_response" class="test">...</div>
   <p>
     Applications may also use <code>HTTP.requests</code> test the state of 
     a pending requests by name, something practical when the state inspector 
@@ -64,11 +68,22 @@ for (var k in <strong>HTTP.requests</strong>) alert(k);</pre>
   <p>
     A count of the pending requests.
   </p>
+  <h3><a name="HTTP.state" href="#"
+  >HTTP.state (active)</a></h3>
+  <p>
+    This method is called when the client starts or stop beeing active,
+    whenever the number of pending requests goes from 0 to 1 or from 1 to 0.
+    By default it removes or adds the <code>hidden</code> CSS class
+    from the element identified as <code>hourGlass</code> in the page 
+    (obviously expecting the usual animation that symbolize a busy network
+    and a wait state).
+  </p>
+  <p>
+    Applications may replace it with more elaborate hour-glasses or use
+    this interface to implement network usage statistics for instance.
+  </p>
   <h3><a name="HTTP.urlencode" href="#"
   >HTTP.urlencode (sb, query)</a></h3>
-  <p>
-    ...
-  </p>
   <pre
     class="synopsis" 
     onclick="{HTML.update($('http_urlencode'), eval_synopsis(this));}" 
@@ -84,20 +99,20 @@ for (var k in <strong>HTTP.requests</strong>) alert(k);</pre>
   <pre class="synopsis" onclick="eval_synopsis(this);"
     >var <strong>form</strong> = {'hello': 'world', 'test': [1, 2.0, true]};
 var <strong>ok</strong> = function (request) {
-    HTML.update($('http_response'), request.responseText);
+    HTML.update($('http_response_post'), request.responseText);
     };
 function <strong>error</strong> (status, request) {
     alert (status);
     }
 var key = <strong>HTTP.request(</strong>'POST', 'hello-world.php', {
     'Content-type': 'application/x-www-form-urlencoded'
-    },  HTTP.urlencode([], {<strong
-    >form</strong>}).join(''), <strong
+    },  HTTP.urlencode([], <strong
+    >form</strong>).join(''), <strong
     >ok</strong>, <strong
     >error</strong>, 1000<strong>)</strong>;</pre>
-  <div id="http_response" class="test">
-    ...
-  </div>
+  <pre
+    >&lt;?php echo '{&quot;who&quot;: &quot;'.$_POST['hello'].'&quot;}' ?&gt;</pre>
+  <div id="http_response_post" class="test">...</div>
   <p>
     <a 
     href="http://tools.ietf.org/html/rfc2616"
@@ -122,8 +137,12 @@ var key = <strong>HTTP.request(</strong>'POST', 'hello-world.php', {
     >except</a></code> any exceptions throwed by the dispatched response 
     handler.
   </p>
+  <h3><a name="HTTP.abort" href="#">HTTP.abort (key)</a></h3>
+  <p>
+    ...
+  </p>
   <h3><a name="HTTP.observe" href="#"
-  >HTTP.observe (key, req)</a></h3>
+  >HTTP.observe (state, req)</a></h3>
   <p>
     Applications that need to monitor responses progress can replace this
     method by their own event dispatcher. The one provided dispatches
@@ -160,20 +179,6 @@ var key = <strong>HTTP.request(</strong>'POST', 'hello-world.php', {
   >HTTP.except (key, message)</a></h3>
   <p>
     ...
-  </p>
-  <h3><a name="HTTP.state" href="#"
-  >HTTP.state (active)</a></h3>
-  <p>
-    This method is called whenever the number of pending requests grows
-    from 0 to 1 or from 1 to 0, ie: when the client starts or stop beeing
-    active. By default it removes or adds the <code>hidden</code> CSS class
-    from the element identified as <code>hourGlass</code> in the page 
-    (obviously expecting the usual animation that symbolize a busy network
-    and a wait state).
-  </p>
-  <p>
-    Applications may replace it with more elaborate hour-glasses or use
-    this interface to implement network usage statistics for instance.
   </p>
 </div>
 <script src="protocols.js" type="text/javascript"></script>

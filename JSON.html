@@ -22,7 +22,6 @@
     <li><a href="#JSON.templates">templates</a></li>
     <li><a href="#JSON.HTML">HTML (sb, value, name)</a></li>
     <li><a href="#JSON.view">view (values)</a></li>
-    <li><a href="#JSON.timeout">timeout</a></li>
     <li><a href="#JSON.errors">errors</a></li>
     <li><a href="#JSON.GET">GET (url, query, ok, headers, timeout)</a></li>
     <li><a href="#JSON.POST">POST (url, object, ok, headers, timeout)</a></li>
@@ -32,32 +31,25 @@
   </ol>
   <h3>Synopsis</h3>
   <p>
-    Easy things should be easy:
+    Refresh the HTML page with a JSON object:
   </p>
   <div class="test" onclick="JSON.GET('hello-world.js')" >
-    Hello <span class="template" id="who"><json/></span>!
+    Hello <span class="template" id="who">...</span> !
   </div>
-  <p>
-    Identify an element in the application's HTML
-    page and attach it a the most common event handler written in the simplest
-    and most readable way:
-  </p>
   <pre>&lt;div class=&quot;test&quot; onclick=&quot;<strong
   >JSON.GET('<a href="hello-world.js"
   >hello-world.js</a>')</strong>&quot; &gt;
-  Hello &lt;span id=&quot;<strong>who</strong>&quot; &gt;...&lt;/span&gt;
+  Hello &lt;span id=&quot;<strong>who</strong>&quot; &gt;...&lt;/span&gt; !
 &lt;/div&gt;</pre>
-  <p>
-    On click get the JSON resource named <code>hello-world.js</code>.
-  </p>
   <pre>{"<strong>who</strong>": "World"}</pre>
   <p>
-    Update or extend the page with the response values
+    By convention, HTML id attributes and CSS class names are used to link 
+    JSON namespaces to elements, CSS styles, HTML templates. Sticking to this
+    convention about ids and classes decouples very well the HTML page view 
+    from the JSON object model.
   </p>
   <p>
-    By convention, CSS class names and HTML id attributes are
-    used throughout the library to link JSON namespaces to HTML templates 
-    and DOM elements.
+    ...
   </p>
   <pre>&lt;div class=&quot;hidden&quot; id=&quot;<strong
   >Protocols.JSON.templates</strong>&quot;&gt;
@@ -74,10 +66,6 @@
   <p>
     ...
   </p>
-  <h3><a name="JSON.timeout" href="#">JSON.timeout</a></h3>
-  <p>
-    ...
-  </p>
   <h3><a name="JSON.errors" href="#">JSON.errors</a></h3>
   <p>
     ...
@@ -86,6 +74,16 @@
   <p>
     ...
   </p>
+  <pre 
+    class="synopsis" 
+    onclick="HTML.update($('json_decode'), JSON.encode(eval_synopsis(this)));"
+    >JSON.decode('{' +
+    '"Hello": "World!", ' +
+    '"Give me": 5, '+
+    '"bottles": [0.9, 9, 99, 999], ' +
+    '"test": true ' +
+    '}');</pre>
+  <div class="test" id="json_decode" >...</div>
   <h3><a name="JSON.buffer" href="#">JSON.buffer (sb, value)</a></h3>
   <p>
     ...
@@ -94,6 +92,16 @@
   <p>
     ...
   </p>
+  <pre 
+    class="synopsis" 
+    onclick="HTML.update($('json_encode'), eval_synopsis(this));"
+    >JSON.encode({
+    "Hello": "World!",
+    "Give me": 5.0,
+    "bottles": [0.900, 9.000, 99.000, 999.000],
+    "test": (1===1)
+    });</pre>
+  <div class="test" id="json_encode" >...</div>
   <h3><a name="JSON.HTML" href="#">JSON.HTML (sb, value, name)</a></h3>
   <p>
     ...
@@ -102,7 +110,7 @@
     >HTML.update($('json_html_test'), JSON.HTML ([], {
     "Hello": "World!", 
     "Give me": 5,
-    "bottles": [9, 99, 999],
+    "bottles": [0.9, 9, 99, 999],
     "test": true
     }, "json_html").join (''));</pre>
   <div id="json_html_test" class="test">
@@ -116,7 +124,7 @@
     >JSON.view({
     "Hello": "World!", 
     "Give me": 5,
-    "bottles": [9, 99, 999],
+    "bottles": [0.9, 9, 99, 999],
     "test": true
     });</pre>
   <div class="test">
@@ -129,7 +137,10 @@
     ...
   </p>
   <pre class="synopsis" onclick="eval_synopsis(this);"
-    >JSON.GET ('hello-world.js', null, function (request) {alert(request.responseText)});</pre>
+    >var ok = function (request) {
+    alert(request.responseText)
+};
+JSON.GET ('hello-world.js', null, ok);</pre>
   <p>
     ...
   </p>
@@ -139,7 +150,10 @@
     ...
   </p>
   <pre class="synopsis" onclick="eval_synopsis(this);"
-    >JSON.POST ('hello.php', {'who': 'world'}, alert);</pre>
+    >var ok = function (request) {
+    alert(request.responseText)
+};
+JSON.POST ('echo.php', {'hello': 'Protocols'}, ok);</pre>
   <p>
     ...
   </p>
@@ -155,6 +169,9 @@
   <p>
     ...
   </p>
+</div>
+<div class="hidden" id="Protocols.JSON.templates" >
+  <span class="who"><em><json/></em></span>
 </div>
 <script src="protocols.js" type="text/javascript"></script>
 <script src="tests.js" type="text/javascript"></script>
