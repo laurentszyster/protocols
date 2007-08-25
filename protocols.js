@@ -74,7 +74,7 @@ var Protocols = function () {
             f.prototype[n] = arguments[i][n];
         }
     return f;
-} // the only OO convenience you need in JavaScript 1.5: 7 lines.
+} // the only OO convenience you need in JavaScript
 Protocols.onload = [];
 (function () {
     var _onload = function () {
@@ -101,7 +101,7 @@ Protocols.onload = [];
         };
     }
 })(); // see http://dean.edwards.name/weblog/2006/06/again/
-var HTTP = {requests: {}, pending: 0};
+var HTTP = {requests: {}, pending: 0, timeout: 3000};
 HTTP.state = function (active) {
     var hourGlass = $('hourGlass');
     if (hourGlass)
@@ -192,25 +192,25 @@ HTTP.request = function (
         req.setRequestHeader(name, headers[name]);
     if (HTTP.pending == 0) HTTP.state(true);
     HTTP.pending++;
-    setTimeout('HTTP.timeout("' + key + '")', timeout || 3000);
+    setTimeout('HTTP.abort("' + key + '")', timeout||HTTP.timeout);
     req.send(body);
     return key;
-}
-HTTP.observe = function (key, state) {
-    (HTTP.observe.rs[key]||pass) (state);
 };
-HTTP.observe.rs = {}; // yeah, that's smart ;-)
 HTTP.response = function (key, ok, error) {
     return function onReadyStateChange () {
         var status = 0, req = HTTP.requests[key];
+        if (!req) { // request allready aborted
+            HTTP.except(key, "aborted");
+        }
         var state = req.readyState;
         if (state > 1) try {
             HTTP.observe(key, state);
         } catch (e) {
             HTTP.except(key, e.toString());
         };
-        if (state > 2) 
+        if (state > 2) try {
             status = req.status; 
+        } catch (e) {}; // timeout is an error with status 0
         if (state == 4) {
             HTTP.requests[key] = null;
             HTTP.pending--;
@@ -235,22 +235,23 @@ HTTP.response = function (key, ok, error) {
         }
     }
 } // see http://www.quirksmode.org/blog/archives/2005/09/xmlhttp_notes_r_2.html
-HTTP.except = function (key, message) {
-    HTTP.except.ions.push(arguments);
-};
-HTTP.except.ions = []; // remove everything with HTTP.except = pass;
-HTTP.timeout = function (key) {
-    try { // to trigger HTTP.requests[key].onreadystatechange() ...
+HTTP.abort = function (key) {
+    try { 
         HTTP.requests[key].abort();
         HTTP.pending--;
         if (HTTP.pending == 0) HTTP.state(false);
     } catch (e) {
-        HTTP.except(key, e.toString());
-    } // ... or pass.
-    finally {
-        HTTP.requests[key] = null; // ... and delete the request after.
+        HTTP.requests[key] = null;
     }
-}
+};
+HTTP.observe = function (key, state) {
+    (HTTP.observe.rs[key]||pass) (state);
+};
+HTTP.observe.rs = {}; // yeah, that's smart ;-)
+HTTP.except = function (key, message) {
+    HTTP.except.ions.push(arguments);
+};
+HTTP.except.ions = []; // remove everything with HTTP.except = pass;
 
 var HTML = {}; // more conveniences for more applications for more ... 
 HTML._escaped = {'<': '&lt;', '>': '&gt;', '"': '&quot;', '&': '&amp;'};
@@ -559,11 +560,11 @@ JSON.view = function (values) {
     for (var key in values) if ($(key) != null && values[key] != null)
         HTML.update($(key), JSON.HTML([], values[key], key).join(''));
 }
-JSON.timeout = 3000; // 3 seconds
 JSON.errors = {};
 JSON.GET = function (url, query, ok, headers, timeout) {
-    if (query)
-        var url = HTTP.formencode([url], query).join ('')
+    if (query) {
+        url = HTTP.formencode([url], query).join ('');
+    }
     if (headers) {
         headers['Accept'] = 'application/json, text/javascript';
     } else {
@@ -574,7 +575,7 @@ JSON.GET = function (url, query, ok, headers, timeout) {
         function (status, req) {
             (JSON.errors[status.toString()]||pass)(url, query, req);
         }, 
-        timeout || JSON.timeout
+        timeout
         );
 }
 JSON.POST = function (url, payload, ok, headers, timeout) {
@@ -593,7 +594,7 @@ JSON.POST = function (url, payload, ok, headers, timeout) {
         function (status, req) {
             (JSON.errors[status.toString()]||pass)(url, payload, req);
         }, 
-        timeout || JSON.timeout
+        timeout
         );
 }
 JSON.update = function (id, name) {
@@ -928,9 +929,17 @@ var CSS = (function(){
         var cssSet = function (element, names) {
             element.setAttribute("className", names.join(' '));
         };
+        var cssRemove = function (element, pcre) {
+            var n = element.className;
+            element.setAttribute("className", n.replace(pcre, ''));
+        };
     } else { // Mozilla, Safari, ...
         var cssSet = function (element, names) {
             element.className = names.join(' ');
+        };
+        var cssRemove = function (element, pcre) {
+            var n = element.className;
+            element.className = n.replace(pcre, '');
         };
     }
     
@@ -1189,19 +1198,7 @@ var CSS = (function(){
                 cssSet(element, names);
         },
         
-        remove: function (element, names) {
-            var current = element.className;
-            if (current) {
-                for (var pos, i=0, L=names.length; i<L; i++) {
-                    pos = current.indexOf(names[i]);
-                    if (pos > -1) current = (
-                        current.substring(0,pos) + 
-                        current.substring(pos+names[i].length,current.length-1) 
-                        );
-                }
-                cssSet(element, [current]);
-            }
-        }, // do not set styles, use them ;-)
+        remove: cssRemove,
         
         /**
          * Collection of "pseudo class" processors. Each processor is passed 
@@ -1397,12 +1394,19 @@ function $$(selector) {return CSS.select(selector);}
 
 Protocols.onload.push(
     function () {
-        var templates = $('templates'), child;
-        if (templates && templates.childNodes != null) {
-            for (child in templates.childNodes) if (child.className) {
-               JSON.templates[child.className] = child.innerHTML.split(
-                   '<json/>'
-                   );
+        var templates = $('Protocols.JSON.templates');
+        if (templates != null && templates.childNodes != null) {
+            var child, template, names, i, L, j, K;
+            var children = templates.childNodes;
+            for (i=0, L=children.length; i<L; i++) {
+                child = children[i];
+                if ((child.nodeType == 1) && child.className) {
+                    template = child.innerHTML.split('<json></json>');
+                    names = child.className.split(' ');
+                    for (j=0, K=names.length; j<K; j++) {
+                        JSON.templates[names[j]] = template;
+                    }
+                }
             }
         }
     });
