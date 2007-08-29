@@ -55,7 +55,9 @@
     >HTTP.request('GET', 'hello-world.js', {}, null, function (request) {
     HTML.update($('http_response'), request.responseText);
     });
-for (var k in <strong>HTTP.requests</strong>) alert(k);</pre>
+for (var key in <strong>HTTP.requests</strong>) 
+    if (HTTP.requests[key]!=null) 
+        alert(key);</pre>
   <div id="http_response" class="test">...</div>
   <p>
     Applications may also use <code>HTTP.requests</code> test the state of 

@@ -61,11 +61,19 @@ function $(id) {
     return document.getElementById(id);
 } // the simplest implementation of Prototype's defacto standard.
 
-function bindAsEventListener(object, fun) {
+function bindAsEventListener(object, fun, bubble, capture) {
     return function listener (event) {
-        return fun.apply(object, [event||window.event]);
+        if (!event) { // IE
+            fun.apply(object, [window.event]);
+            window.event.cancelBubble = (bubble==false);
+            return capture;
+        } else { // W3C
+            fun.apply(object, [event])
+            if (bubble==false) event.stopPropagation();
+            if (capture) event.preventDefault();
+        }
     }
-} // a different event listener binding than Prototype's, as effective.
+} // a different event listener binding than Prototype's.
 
 var Protocols = function () {
     var n, f = function () {this.initialize.apply(this, arguments)};
@@ -226,12 +234,6 @@ HTTP.response = function (key, ok, error) {
             } catch (e) {
                 HTTP.except(key, e.toString());
             }
-        } else if (status === 0 && req.responseText) { // Firefox only ?
-            try {
-                ok (req);
-            } catch (e) {
-                HTTP.except(key, e.toString());
-            }
         }
     }
 } // see http://www.quirksmode.org/blog/archives/2005/09/xmlhttp_notes_r_2.html
@@ -277,16 +279,6 @@ HTML.input = function (elements, query) {
     }
     return query;
 }
-HTML.listen = (function () {
-    if (window.XMLHttpRequest) // Mozilla, Safari, ...
-        return function (element, type, listener) {
-            element.addEventListener(type, listener, false);
-        };
-    else // IE ...
-        return function (element, type, listener) {
-            element.attachEvent("on" + type, listener);
-        };
-})();
 HTML.text = (function () {
     if (window.XMLHttpRequest) // Mozilla, Safari, ...
         return function (element) {
@@ -377,8 +369,22 @@ HTML.insert = function (element, html, adjacency) {
                 );
     }
 }
-HTML.bind = function (element, type, listener) {
-    HTML.listen(element, type, bindAsEventListener(element, listener));
+HTML.listen = (function () {
+    if (window.XMLHttpRequest) // Mozilla, Safari, ...
+        return function (element, type, listener) {
+            element.addEventListener(type, listener, false);
+            return listener;
+        };
+    else // IE ...
+        return function (element, type, listener) {
+            element.attachEvent("on" + type, listener);
+            return listener;
+        };
+})();
+HTML.bind = function (element, type, listener, bubble, capture) {
+    return HTML.listen(
+       element, type, bindAsEventListener(element, listener, bubble, capture)
+       );
 }
 HTML.parse = function (text) {
     var el = document.createElement('div');
@@ -1401,7 +1407,9 @@ Protocols.onload.push(
             for (i=0, L=children.length; i<L; i++) {
                 child = children[i];
                 if ((child.nodeType == 1) && child.className) {
-                    template = child.innerHTML.split('<json></json>');
+                    template = child.innerHTML.split(
+                        /<json\s*\/>|<json\s*><\/json>/i
+                        );
                     names = child.className.split(' ');
                     for (j=0, K=names.length; j<K; j++) {
                         JSON.templates[names[j]] = template;

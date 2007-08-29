@@ -22,7 +22,7 @@
     <li><a href="#$">$ (id)</a></li>
     <li><a href="#$$">$$ (selector, element)</a></li>
     <li><a href="#bindAsEventListener"
-    >bindAsEventListener (object, fun)</a></li>
+    >bindAsEventListener (object, fun, bubble, capture)</a></li>
     <li><a href="#Protocols">Protocols ()</a></li>
     <li><a href="#Protocols.onload">Protocols.onload</a></li>
   </ol>
@@ -96,18 +96,32 @@
     >CSS.select</a></code> for more information.
   </p>
   <h3><a name="bindAsEventListener" href="#"
-  >bindAsEventListener (object, fun)</a></h3>
+  >bindAsEventListener (object, fun, bubble, capture)</a></h3>
   <p>
     Bind an object as the first argument of a function that expects as
     second argument an event. It is applied to bind a function to an
     object and then attach it as an event listener to an element of the 
-    document.
+    document. The last two arguments - bubble and capture - are optional.
+    To prevent the propagation of the event, set <code>bubble</code> 
+    to false. To prevent the default action to take place, set 
+    <code>capture</code> to true.
   </p>
   <pre id="bindAsEvenListener_test" class="synopsis" onclick="eval_synopsis(this);"
     >var listener = <strong>bindAsEventListener(</strong>
     {who: 'world!'}, function (event) {alert('hello ' + this.who);}
     <strong>);</strong>
-HTML.listen ($('bindAsEvenListener_test'), 'mouseout', listener);</pre>
+HTML.listen ($('bindAsEvenListener_test'), 'click', listener);</pre>
+  <p>
+    The last two arguments - bubble and capture - are optional.
+    To prevent the propagation of the event, set <code>bubble</code> 
+    to false. To prevent the default action to take place, set 
+    <code>capture</code> to true.
+  </p>
+  <pre id="bindAsEvenListener_test" class="synopsis" onclick="eval_synopsis(this);"
+    >var listener = <strong>bindAsEventListener(</strong>
+    {who: 'world!'}, function (event) {alert('hello ' + this.who);}
+    <strong>);</strong>
+HTML.listen ($('bindAsEvenListener_test'), 'click', listener);</pre>
   <p>
     Users of <code>prototype.js</code> should note that this implementation
     is somewhat simpler that the one coming with version 1.5.0 of their
