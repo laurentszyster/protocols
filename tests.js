@@ -2,7 +2,7 @@ function eval_synopsis (element) {
     return eval ('{' + HTML.text(element) + '}')
 }
 
-Protocols.onload.push(function () {
+HTML.onload.push(function () {
     var hover = ['hover'];
     map(function (el) {
         HTML.listen(el, 'mouseover', function () {

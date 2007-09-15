@@ -24,7 +24,6 @@
     <li><a href="#bindAsEventListener"
     >bindAsEventListener (object, fun, bubble, capture)</a></li>
     <li><a href="#Protocols">Protocols ()</a></li>
-    <li><a href="#Protocols.onload">Protocols.onload</a></li>
   </ol>
   <h3>Synopsis</h3>
   <p>
@@ -155,28 +154,6 @@ world.hello();</pre>
     one of the protocols mixed in, supports composition only and resolves
     name conflict simply: the last interface mixed-in overrides the previous 
     one(s).
-  </p>
-  <h3><a name="Protocols.onload" href="#">Protocols.onload</a></h3>
-  <p>
-    The <code>onload</code> property of <code>Protocols</code> is an array
-    of functions that will be called once the HTML page is ready but before
-    any linked resources have been loaded.
-  </p>
-  <pre>Protocols.onload.push(function () {
-    var hover = ['hover'];
-    map(function (el) {
-        HTML.listen(el, 'mouseover', function () {
-            CSS.add(el, hover);
-        });
-        HTML.listen(el, 'mouseout', function () {
-            CSS.remove(el, /hover\s*/g);
-        });
-    }, $$('pre.synopsis'));
-});</pre>
-  <p>
-    See <a 
-    href="http://dean.edwards.name/weblog/2006/06/again/"
-    >http://dean.edwards.name/weblog/2006/06/again/</a>.
   </p>
 </div>
 <script src="protocols.js" type="text/javascript"></script>

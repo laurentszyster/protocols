@@ -19,6 +19,7 @@
   </div>
   <h2>HyperText Markup Language (HTML)</h2>
   <ol>
+    <li><a href="#HTML.onload">Protocols.onload</a></li>
     <li><a href="#HTML.cdata">cdata (string)</a></li>
     <li><a href="#HTML.text">text (element)</a></li>
     <li><a href="#HTML.input">input (element)</a></li>
@@ -49,6 +50,28 @@
   <p>
     Many web applications can use these methods only, most entreprise
     applications will. 
+  </p>
+  <h3><a name="HTML.onload" href="#">Protocols.onload</a></h3>
+  <p>
+    The <code>onload</code> property of <code>HTML</code> is an array
+    of functions that will be called once the HTML page is ready but before
+    any linked resources have been loaded.
+  </p>
+  <pre>HTML.onload.push(function () {
+    var hover = ['hover'];
+    map(function (el) {
+        HTML.listen(el, 'mouseover', function () {
+            CSS.add(el, hover);
+        });
+        HTML.listen(el, 'mouseout', function () {
+            CSS.remove(el, /hover\s*/g);
+        });
+    }, $$('pre.synopsis'));
+});</pre>
+  <p>
+    See <a 
+    href="http://dean.edwards.name/weblog/2006/06/again/"
+    >http://dean.edwards.name/weblog/2006/06/again/</a>.
   </p>
   <h3><a name="HTML.cdata" href="#">HTML.cdata (string)</a></h3>
   <pre
