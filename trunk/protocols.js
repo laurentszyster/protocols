@@ -83,32 +83,6 @@ var Protocols = function () {
         }
     return f;
 } // the only OO convenience you need in JavaScript
-Protocols.onload = [];
-(function () {
-    var _onload = function () {
-        for (var i=0, L=Protocols.onload.length; i<L; i++) 
-            Protocols.onload[i]();
-    };
-    if (document.addEventListener) { // Mozilla
-        document.addEventListener("DOMContentLoaded", _onload, false);
-    } else if (/WebKit/i.test(navigator.userAgent)) { // Safari
-        var _timer = setInterval(function() {
-            if (/loaded|complete/.test(document.readyState)) {
-                clearInterval(_timer); 
-                _onload();
-            }
-        }, 10);
-    } else { // IE is somehow supported ...
-        // for Internet Explorer (using conditional comments)
-        document.write("<script id=__ie_onload defer src=javascript:void(0)><\/script>");
-        var script = document.getElementById("__ie_onload");
-        script.onreadystatechange = function() {
-            if (this.readyState == "complete") {
-                _onload(); // call the onload handler
-            }
-        };
-    }
-})(); // see http://dean.edwards.name/weblog/2006/06/again/
 var HTTP = {requests: {}, pending: 0, timeout: 3000};
 HTTP.state = function (active) {
     var hourGlass = $('hourGlass');
@@ -255,7 +229,33 @@ HTTP.except = function (key, message) {
 };
 HTTP.except.ions = []; // remove everything with HTTP.except = pass;
 
-var HTML = {}; // more conveniences for more applications for more ... 
+var HTML = {onload: []};
+(function () {
+    var _onload = function () {
+        for (var i=0, L=HTML.onload.length; i<L; i++) 
+            HTML.onload[i]();
+        HTML.onload = null; // release those functions now!
+    };
+    if (document.addEventListener) { // Mozilla
+        document.addEventListener("DOMContentLoaded", _onload, false);
+    } else if (/WebKit/i.test(navigator.userAgent)) { // Safari
+        var _timer = setInterval(function() {
+            if (/loaded|complete/.test(document.readyState)) {
+                clearInterval(_timer); 
+                _onload();
+            }
+        }, 10);
+    } else { // IE is somehow supported ...
+        // for Internet Explorer (using conditional comments)
+        document.write("<script id=__ie_onload defer src=javascript:void(0)><\/script>");
+        var script = document.getElementById("__ie_onload");
+        script.onreadystatechange = function() {
+            if (this.readyState == "complete") {
+                _onload(); // call the onload handler
+            }
+        };
+    }
+})(); // see http://dean.edwards.name/weblog/2006/06/again/
 HTML._escaped = {'<': '&lt;', '>': '&gt;', '"': '&quot;', '&': '&amp;'};
 HTML._escape = function (a, b) {return HTML._escaped[b];}
 HTML.cdata = function (string) {
@@ -541,17 +541,10 @@ JSON.HTML = function (sb, value, name) {
                 sb.push('</div>');
             }
         } else { // Array
-            if (template) {
-                sb.push(template[0]);
-                for (var i=0, L=value.length; i<L; i++) 
-                    JSON.HTML(sb, value[i], name)
-                sb.push(template[1]);
-            } else {
-                sb.push('<div class="array">');
-                for (var i=0, L=value.length; i<L; i++) 
-                    JSON.HTML(sb, value[i], name)
-                sb.push('</div>');
-            }
+            sb.push('<div class="array">');
+            for (var i=0, L=value.length; i<L; i++) 
+                JSON.HTML(sb, value[i], name)
+            sb.push('</div>');
         }
         break;
     default:
@@ -1398,7 +1391,7 @@ var CSS = (function(){
  */
 function $$(selector) {return CSS.select(selector);}
 
-Protocols.onload.push(
+HTML.onload.push(
     function () {
         var templates = $('Protocols.JSON.templates');
         if (templates != null && templates.childNodes != null) {
