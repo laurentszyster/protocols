@@ -197,7 +197,7 @@ HTTP.response = function (key, ok, error) {
             HTTP.requests[key] = null;
             HTTP.pending--;
             if (HTTP.pending == 0) HTTP.state(false);
-            if (status == 200) {
+            if (status == 200 || ((status == 0) && req.responseText)) {
                 try {
                     ok (req);
                 } catch (e) {
@@ -562,7 +562,7 @@ JSON.view = function (values) {
 JSON.errors = {};
 JSON.GET = function (url, query, ok, headers, timeout) {
     if (query) {
-        url = HTTP.formencode([url], query).join ('');
+        url = HTTP.urlencode([url], query).join ('');
     }
     if (headers) {
         headers['Accept'] = 'application/json, text/javascript';
