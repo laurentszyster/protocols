@@ -20,6 +20,15 @@ You should have received a copy of the GNU General Public License along with
 this library; if not, write to the Free Software Foundation, Inc., 59 Temple 
 Place, Suite 330, Boston, MA 02111-1307 USA */
 
+var Protocols = function () {
+    var n, f = function () {this.initialize.apply(this, arguments)};
+    for (var i=0, L=arguments.length; i<L; i++)
+        for (n in arguments[i]) {
+            f.prototype[n] = arguments[i][n];
+        }
+    return f;
+} // the only OO convenience you need in JavaScript
+
 function _ie_purge(d) {
     var a = d.attributes, i, l, n;
     if (a) {
@@ -35,13 +44,22 @@ function _ie_purge(d) {
     }
 } // see http://javascript.crockford.com/memory/leak.html
 
-function pass() {}; // noop, nada, niks, rien.
-function map (fun, list) {
-    var r = [];
-    for (var i=0, L=list.length; i<L; i++) 
-        r.push(fun(list[i]));
-    return r;
-};
+function pass (state) {return state}; // noop, nada, niks, rien.
+
+var map = (function () {
+    if (Array.map)
+        return function (fun, list) {
+            return list.map(fun);
+        };
+    else 
+        return function (fun, list) {
+            var r = [];
+            for (var i=0, L=list.length; i<L; i++) 
+                r.push(fun(list[i], i, list));
+            return r;
+        };
+})();
+
 var filter = (function () {
     if (Array.filter)
         return function (fun, list) {
@@ -51,7 +69,7 @@ var filter = (function () {
         return function (fun, list) {
             var r = [];
             for (var i=0, L=list.length; i<L; i++) 
-                if (fun(list[i]))
+                if (fun(list[i], i, list))
                     r.push(list[i]);
             return r;
         };
@@ -59,7 +77,18 @@ var filter = (function () {
 
 function $(id) {
     return document.getElementById(id);
-} // the simplest implementation of Prototype's defacto standard.
+} // the simplest implementation of Prototype's defacto standard convenience.
+$.browser = (function () {
+    var ua = navigator.userAgent.toLowerCase();
+    return {
+        name: ua,
+    	version: (ua.match(/.+(?:rv|it|ra|ie)[\/: ]([\d.]+)/) || [])[1],
+    	safari: /webkit/.test(ua),
+    	opera: /opera/.test(ua),
+    	msie: /msie/.test(ua) && !/opera/.test(ua),
+    	mozilla: /mozilla/.test(ua) && !/(compatible|webkit)/.test(ua)
+        } // browser detection, jQuery style and syntax
+})();
 
 function bindAsEventListener(object, fun, bubble, capture) {
     return function listener (event) {
@@ -75,22 +104,14 @@ function bindAsEventListener(object, fun, bubble, capture) {
     }
 } // a different event listener binding than Prototype's.
 
-var Protocols = function () {
-    var n, f = function () {this.initialize.apply(this, arguments)};
-    for (var i=0, L=arguments.length; i<L; i++)
-        for (n in arguments[i]) {
-            f.prototype[n] = arguments[i][n];
-        }
-    return f;
-} // the only OO convenience you need in JavaScript
 var HTTP = {requests: {}, pending: 0, timeout: 3000};
 HTTP.state = function (active) {
-    var hourGlass = $('hourGlass');
-    if (hourGlass)
+    var el = $('Protocols.HTTP.state');
+    if (el)
         if (active)
-            CSS.add (hourGlass, ['wait']);
+            CSS.add (el, ['active']);
         else
-            CSS.remove (hourGlass, ['wait']);
+            CSS.remove (el, ['active']);
 }
 HTTP.urlencode = (function () {
     var _encode = function (s) {
@@ -164,7 +185,7 @@ HTTP.request = function (
         }
     }
     if (!req) {
-        (except||pass)(key, "XMLHttpRequest not supported"); 
+        (HTTP.except||pass)(key, "XMLHttpRequest not supported"); 
         return null;
     }
     HTTP.requests[key] = req;
@@ -185,11 +206,14 @@ HTTP.response = function (key, ok, error) {
             HTTP.except(key, "aborted");
         }
         var state = req.readyState;
-        if (state > 1) try {
-            HTTP.observe(key, state);
-        } catch (e) {
-            HTTP.except(key, e.toString());
-        };
+        if (state > 1) {
+            if (HTTP.except) try {
+                HTTP.observe(key, state);
+            } catch (e) {
+                HTTP.except(key, e.toString());
+            } else
+                HTTP.observe(key, state);
+        }
         if (state > 2) try {
             status = req.status; 
         } catch (e) {}; // timeout is an error with status 0
@@ -198,15 +222,20 @@ HTTP.response = function (key, ok, error) {
             HTTP.pending--;
             if (HTTP.pending == 0) HTTP.state(false);
             if (status == 200 || ((status == 0) && req.responseText)) {
-                try {
+                if (HTTP.except) try {
                     ok (req);
                 } catch (e) {
                     HTTP.except(key, e.toString());
+                } else
+                    ok(req);
+            } else if (error) {
+                if (HTTP.except) try {
+                    error (status, req);
+                } catch (e) {
+                    HTTP.except(key, e.toString());
+                } else {
+                    error (status, req);
                 }
-            } else if (error) try {
-                error (status, req);
-            } catch (e) {
-                HTTP.except(key, e.toString());
             }
         }
     }
@@ -224,10 +253,7 @@ HTTP.observe = function (key, state) {
     (HTTP.observe.rs[key]||pass) (state);
 };
 HTTP.observe.rs = {}; // yeah, that's smart ;-)
-HTTP.except = function (key, message) {
-    HTTP.except.ions.push(arguments);
-};
-HTTP.except.ions = []; // remove everything with HTTP.except = pass;
+HTTP.except = null;
 
 var HTML = {onload: []};
 (function () {
@@ -245,24 +271,44 @@ var HTML = {onload: []};
                 _onload();
             }
         }, 10);
-    } else { // IE is somehow supported ...
-        // for Internet Explorer (using conditional comments)
-        document.write("<script id=__ie_onload defer src=javascript:void(0)><\/script>");
+    } else { // for Internet Explorer (using conditional comments)
+        document.write(
+            "<script id=__ie_onload defer src=javascript:void(0)><\/script>"
+            );
         var script = document.getElementById("__ie_onload");
         script.onreadystatechange = function() {
             if (this.readyState == "complete") {
-                _onload(); // call the onload handler
+                _onload();
             }
         };
     }
 })(); // see http://dean.edwards.name/weblog/2006/06/again/
-HTML._escaped = {'<': '&lt;', '>': '&gt;', '"': '&quot;', '&': '&amp;'};
-HTML._escape = function (a, b) {return HTML._escaped[b];}
-HTML.cdata = function (string) {
-    if (/[<>"&]/.test(string)) 
-        return string.replace(/([<>"&])/g, HTML._escape);
-    else
-        return string;
+HTML.cdata = (function () {
+    var _escape = (function () {
+        var _escaped = {
+            '<': '&lt;', 
+            '>': '&gt;', 
+            '"': '&quot;', 
+            '&': '&amp;'
+            };
+        return function (a, b) {
+            return _escaped[b];
+        };
+    })();
+    return function (string) {
+        if (/[<>"&]/.test(string)) 
+            return string.replace(/([<>"&])/g, _escape);
+        else
+            return string;
+    }
+})();
+HTML.children = function (element, fun) {
+    if (!fun) fun = pass;
+    var l = [], nodes = el.childNodes;
+    for (var i, n; n=nodes[i]; i++) if (n.nodeType == 1) {
+        l.push(fun(n));
+    }
+    return l;
 }
 HTML.input = function (elements, query) {
     for (var el, i=0, L=elements.length; i<L; i++) {
@@ -393,87 +439,94 @@ HTML.parse = function (text) {
 }
 
 var JSON = {}
-JSON._escaped = {
-    '\b': '\\b',
-    '\t': '\\t',
-    '\n': '\\n',
-    '\f': '\\f',
-    '\r': '\\r',
-    '"' : '\\"',
-    '\\': '\\\\'
-    };
-JSON._escape = function (a, b) {
-    var c = JSON._escaped[b];
-    if (c) return c;
-    c = b.charCodeAt();
-    return '\\u00'+Math.floor(c/16).toString(16)+(c%16).toString(16);
-}
 JSON.decode = function (string) {
     try {
         if (/^("(\\.|[^"\\\n\r])*?"|[,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t])+?$/.
                 test(string))
             return eval('(' + string + ')');
     } catch (e) {
-        throw new "JSON syntax error";
+        throw "JSON syntax error";
     }
 }
-JSON.buffer = function (sb, value) {
-    switch (typeof value) {
-    case 'string':
-        sb.push ('"');
-        if (/["\\\x00-\x1f]/.test(value)) 
-            sb.push(value.replace(/([\x00-\x1f\\"])/g, JSON._escape));
-        else
-            sb.push(value);
-        sb.push ('"');
-        return sb;
-    case 'number':
-        sb.push (isFinite(value) ? value : "null"); 
-        return sb;
-    case 'boolean':
-        sb.push (value); 
-        return sb;
-    case 'undefined': case 'function': case 'unknown':
-        return sb;
-    case 'object':
-        if (value == null) 
-            sb.push ("null");
-        else if (value.length == null) { // Object
-            sb.push ('{');
-            for (k in value) {
-                JSON.buffer (sb, k);
-                sb.push (':'); 
-                JSON.buffer (sb, value[k]); 
-                sb.push (',');
-                }
-            if (sb.pop() == '{') 
-                sb.push('{}');
-            else {
-                sb.push('}');
-            }
-        } else { // Array
-            sb.push ('[');
-            for (var i=0, L=value.length; i<L; i++) {
-                JSON.buffer (sb, value[i]); 
-                sb.push (',')
-                }
-            if (sb.pop() == '[') 
-                sb.push('[]');
-            else 
-                sb.push(']');
+JSON.buffer = (function () {
+    var _escape = (function () {
+        var _escaped = {
+            '\b': '\\b',
+            '\t': '\\t',
+            '\n': '\\n',
+            '\f': '\\f',
+            '\r': '\\r',
+            '"' : '\\"',
+            '\\': '\\\\'
+            };
+        return function (a, b) {
+            var c = _escaped[b];
+            if (c) return c;
+            c = b.charCodeAt();
+            return '\\u00'+Math.floor(c/16).toString(16)+(c%16).toString(16);
         }
-        return sb;
-    default:
-        value = value.toString();
-        sb.push ('"');
-        if (/["\\\x00-\x1f]/.test(value)) 
-            sb.push(value.replace(/([\x00-\x1f\\"])/g, JSON._escape));
-        else
-            sb.push(value);
-        sb.push ('"');
-        return sb;
-    }
-}
+    })();
+    return function (sb, value) { // uniform encoding rules!
+        switch (typeof value) {
+        case 'string':
+            sb.push ('"');
+            if (/["\\\x00-\x1f]/.test(value)) 
+                sb.push(value.replace(/([\x00-\x1f\\"])/g, _escape));
+            else
+                sb.push(value);
+            sb.push ('"');
+            return sb;
+        case 'number':
+            sb.push (isFinite(value) ? value : "null"); 
+            return sb;
+        case 'boolean':
+            sb.push (value); 
+            return sb;
+        case 'undefined': case 'function': case 'unknown':
+            return sb;
+        case 'object':
+            if (value == null) 
+                sb.push ("null");
+            else if (value.length == null) { // Object
+                sb.push ('{');
+                var l = [];
+                for (var k in value) l.push(k);
+                l = l.sort();
+                for (var i=0, k; k=l[i]; i++) {
+                    JSON.buffer (sb, k);
+                    sb.push (':'); 
+                    JSON.buffer (sb, value[k]); 
+                    sb.push (',');
+                    }
+                if (sb.pop() == '{') 
+                    sb.push('{}');
+                else {
+                    sb.push('}');
+                }
+            } else { // Array
+                sb.push ('[');
+                for (var i=0, L=value.length; i<L; i++) {
+                    JSON.buffer (sb, value[i]); 
+                    sb.push (',')
+                    }
+                if (sb.pop() == '[') 
+                    sb.push('[]');
+                else 
+                    sb.push(']');
+            }
+            return sb;
+        default:
+            value = value.toString();
+            sb.push ('"');
+            if (/["\\\x00-\x1f]/.test(value)) 
+                sb.push(value.replace(/([\x00-\x1f\\"])/g, _escape));
+            else
+                sb.push(value);
+            sb.push ('"');
+            return sb;
+        }
+    };
+})();
 JSON.encode = function (value) {
     return JSON.buffer([], value).join('');
 }
@@ -561,8 +614,16 @@ JSON.view = function (values) {
 }
 JSON.errors = {};
 JSON.GET = function (url, query, ok, headers, timeout) {
-    if (query) {
-        url = HTTP.urlencode([url], query).join ('');
+    if (typeof query == 'string') {
+        url = HTTP.urlencode([url], {'arg0': query}).join ('');
+    } else if (query != null && typeof query == 'object'){
+        if (query.length == null)
+            url = HTTP.urlencode([url], query).join ('');
+        else {
+            var args = {};
+            for (var i=0, v; v=query[i];i++) args['arg'+i]=v;
+            url = HTTP.urlencode([url], args).join ('');
+        }
     }
     if (headers) {
         headers['Accept'] = 'application/json, text/javascript';
@@ -666,16 +727,19 @@ var CSS = (function(){
         }
         return null;
     };
+    HTML.child = child;
     
     function next(n){
         while((n = n.nextSibling) && n.nodeType != 1);
         return n;
     };
+    HTML.next = next;
     
     function prev(n){
         while((n = n.previousSibling) && n.nodeType != 1);
         return n;
     };
+    HTML.prev = prev;
     
     function clean(d){
         var n = d.firstChild, ni = -1;
@@ -721,6 +785,7 @@ var CSS = (function(){
         return n.getAttribute(attr) || n[attr];
           
     };
+    HTML.attribute = attrValue;
     
     function getNodes(ns, mode, tagName){
         var result = [], cs;
@@ -1382,14 +1447,37 @@ var CSS = (function(){
     };
 })();
 
-/**
- * Selects an array of DOM nodes by CSS/XPath selector. Shorthand 
- * of {@link CSS#select}
- * @param {String} path The selector/xpath query
- * @param {Node} root (optional) The start of the query (defaults to document).
- * @return {Array}
- */
-function $$(selector) {return CSS.select(selector);}
+var $$ = function (selector, root) {
+    $$.selected = CSS.select(selector, root);
+    return $$;
+}; // a CSS selector shortcut and state
+
+$$.extend = function (name, fun) {
+    if (Array.prototype.map) {
+        $$[name] = function (selected) {
+            (selected || $$.selected).map (fun); 
+            return $$;
+        };
+    } else {
+        $$[name] = function (selected) {
+            var s = (selected || $$.selected);
+            for (var i=0, v; v=s[i]; i++) {
+                fun (v, i, s);
+            };
+            return $$;
+        };
+    };
+}; // extend the $$ with conveniences
+
+$$.bind = function (event, listener, bubble, capture) {
+    var s = $$.selected;
+    for (var i=0, v; v=s[i]; i++) {
+        HTML.listen(v, event, bindAsEventListener(
+            v, listener, bubble, capture
+            ));
+    };
+    return $$;
+}; // bind the same event listener to a CSS selection at once
 
 HTML.onload.push(
     function () {
@@ -1397,15 +1485,14 @@ HTML.onload.push(
         if (templates != null && templates.childNodes != null) {
             var child, template, names, i, L, j, K;
             var children = templates.childNodes;
-            for (i=0, L=children.length; i<L; i++) {
-                child = children[i];
+            for (i=0, child; child=children[i]; i++) {
                 if ((child.nodeType == 1) && child.className) {
                     template = child.innerHTML.split(
                         /<json\s*\/>|<json\s*><\/json>/i
                         );
                     names = child.className.split(' ');
-                    for (j=0, K=names.length; j<K; j++) {
-                        JSON.templates[names[j]] = template;
+                    for (j=0, name; v=names[j]; j++) {
+                        JSON.templates[name] = template;
                     }
                 }
             }
