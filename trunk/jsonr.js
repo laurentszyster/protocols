@@ -1,575 +1,750 @@
-/* Copyright (C) 2007 Laurent A.V. Szyster
+var JSONR = (function(){
 
-This library is free software; you can redistribute it and/or modify
-it under the terms of version 2 of the GNU General Public License as
-published by the Free Software Foundation.
-
-    http://www.gnu.org/copyleft/gpl.html
-
-This library is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-You should have received a copy of the GNU General Public License
-along with this library; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
- 
-JSON.pprint = (function () {
-    var _escape = (function () {
-        var _escaped = {
-            '\b': '\\b',
-            '\t': '\\t',
-            '\n': '\\n',
-            '\f': '\\f',
-            '\r': '\\r',
-            '"' : '\\"',
-            '\\': '\\\\'
-            };
-        return function (a, b) {
-            var c = _escaped[b];
-            if (c) return c;
-            c = b.charCodeAt();
-            return '\\u00'+Math.floor(c/16).toString(16)+(c%16).toString(16);
-        }
-    })();
-    return function (sb, value, indent) {
-        switch (typeof value) {
-        case 'string': case 'number': case 'boolean':
-            return JSON.buffer(sb, value);
-        case 'undefined': case 'function': case 'unknown':
-            return sb;
-        case 'object':
-            if (value == null) 
-                sb.push ("null");
-            else if (value.length == null) { // Object
-                sb.push ('{');
-                if (indent) {
-                    indent += '  ';
-                } else
-                    indent = '\r\n  ';
-                for (k in value) {
-                    sb.push (indent);
-                    JSON.buffer (sb, k);
-                    sb.push (': '); 
-                    JSON.pprint (sb, value[k], indent); 
-                    sb.push (',');
-                    }
-                if (sb.pop() == '{') 
-                    sb.push('{}');
-                else {
-                    sb.push(indent);
-                    sb.push('}');
-                }
-            } else { // Array
-                var flat = true;
-                var v, i, L=value.length;
-                for (i=0; i<L; i++) {
-                    v = value[i];
-                    if (v !== null && (typeof v) == 'object') {
-                        flat = false;
-                        break;
-                    }
-                }
-                if (flat) {
-                    sb.push ('[');
-                    for (i=0; i<L; i++) {
-                        JSON.buffer (sb, value[i]); 
-                        sb.push (', ');
-                    }
-                    if (sb.pop() == '[') {
-                        sb.push('[]');
-                    } else {
-                        sb.push(']');
-                    }
-                } else {
-                    if (indent) {
-                        indent += '  ';
-                    } else
-                        indent = '\r\n  ';
-                    sb.push ('[');
-                    for (i=0; i<L; i++) {
-                        sb.push (indent);
-                        JSON.pprint (sb, value[i], indent); 
-                        sb.push (',');
-                    }
-                    if (sb.pop() == '[') {
-                        sb.push('[]');
-                    } else {
-                        sb.push(indent);
-                        sb.push(']');
-                    }
-                }
-            }
-            return sb;
-        default:
-            value = value.toString();
-            sb.push ('"');
-            if (/["\\\x00-\x1f]/.test(value)) 
-                sb.push(value.replace(/([\x00-\x1f\\"])/g, _escape));
-            else
-                sb.push(value);
-            sb.push ('"');
-            return sb;
-        }
-    };
-})();
- 
-JSON.Regular = {};
-// JSON.Regular.models = {};
-JSON.Regular.initialize = function (name, model, json, extensions) {
-    this._this = name;
-    // JSON.Regular.models[name] = this;
-    this.model = model;
-    this.json = json;
-    this.extensions = extensions || {};
-    this.errors = {};
-    this.templates = {
-        "null": [null, null, '<div class="column span-15">', '</div>'],
-        "boolean": [null, null, '<div class="column span-1">', '</div>'],
-        "string": [
-            null, null, 
-            '<div class="column span-15" style="height: 6em;">', '</div>'
-            ],
-        "number": [null, null, '<div class="column span-2">', '</div>'],
-        "pcre": [null, null, '<div class="column span-5">', '</div>'],
-        "namespace": [
-            null, null, '<div class="column span-15 last">', '</div>'
-            ],
-        "relation": [null, null, '<div class="field">', '</div>'],
-        "collection": [null, null, '<div class="field">', '</div>']
-    };
-};
-JSON.Regular.type = function () {
-    var value = (arguments.length > 0) ? arguments[0]: this.model;
-    switch (typeof value) {
+function _type (model, extensions) {
+    if (!extensions) extensions = JSONR.extensions;
+    switch (typeof model) {
     case "boolean": 
         return "boolean";
     case "string": 
-        if (value=="")
+        if (model=="") {
             return "string";
-        else if (this.extensions[value])
-            return value;
-        else if (this.model[value])
-            return "model";
-        else
+        } else if (extensions[model]) {
+            return model;
+        } else {
             return "pcre";
+        }
     case "number": 
-        return "number";  
+        if (model === 0) {
+            return "number";
+        }
+        var s = model.toString();
+        if (model == parseInt(s)) {
+            return "integer";  
+        } else {
+            return "decimal";
+        }
     case "object":
-        if (value===null) 
+        if (model === null) {
             return "null";
-        else {
-            var L=value.length;
-            if (L==null) {
+        } else {
+            var L = model.length;
+            if (typeof L == 'undefined') {
                 var keys = [];
-                for (var k in value) 
-                    if (!(typeof value[k]=="function")) 
+                for (var k in model) {
+                    if (!(typeof model[k]=="function")) {
                         keys.push(k);
-                if (keys.length > 1) 
+                    }
+                }
+                if (keys.length > 1) {
                     return "namespace";
-                else if (keys.length > 0)
+                } else if (keys.length > 0) {
                     return "dictionary";
-                else
-                    throw "{} is not a valid JSONR pattern";
-            } else if (L==1)
+                } else {
+                    throw "{} is not a regular JSON expression";
+                }
+            } else if (L == 1) {
                 return "collection";
-            else
+            } else if (L > 1) {
                 return "relation"
+            } else {
+                throw "[] is not a regular JSON expression";
+            }
+        }
+    }
+}
+
+function _cast (type, value) {
+    switch (type) {
+    case 'null': 
+        return value;
+    case 'boolean':
+        return value === true;
+    case 'string': 
+    case 'pcre': 
+        if (value === null || typeof value == 'undefined') {
+            return '';
+        } else {
+            return value.toString();
+        }
+    case 'number': 
+    case 'integer': 
+    case 'decimal':
+        if (typeof value == 'number') {
+            return value;
+        } else if (typeof value == 'string') {
+            try {
+                return parseFloat(value.toString());
+            } catch (e1) {
+                return 0;
+            }
+        } else {
+            return 0;
+        }
+    case 'collection': 
+    case 'relation': 
+        if (
+            value !== null && 
+            typeof value == 'object' &&
+            typeof value.length != 'undefined'
+            ) {
+            return value;
+        } else {
+            return [];
+        }
+    case 'dictionary': 
+    case 'namespace': 
+        if (
+            value !== null &&
+            typeof value == 'object' &&
+            typeof value.length == 'undefined'
+            ) {
+            return value;
+        } else {
+            return {};
+        }
+    }
+    return value.toString();
+}
+
+
+function _get (path, value) {
+    for (var i=0, L=path.length; i<L && value; i++) {
+        value = value[path[i]];
+    }
+    return value;
+}
+
+function _set (path, value) {
+    var v=JSONR.values, L=path.length - 1;
+    for (var i=0; i<L; i++) {
+        v = v[path[i]];
+    }
+    v[path[L]] = value;
+    return value;
+}
+
+var JSONR = {
+    models: {},
+    values: {},
+    errors: {},
+    extensions: {},
+    templates: {},
+    type: _type,
+    cast: _cast
+};
+
+JSONR.control = function (name, model, value, errors) {
+    JSONR.models[name] = (typeof model == 'undefined')  ? null : model ;
+    JSONR.values[name] = (typeof value == 'undefined')  ? null : value ;
+    JSONR.errors[name] = (typeof errors == 'undefined') ? {}   : errors ;
+};
+
+JSONR.remove = function (name) {
+    delete JSONR.models[name];
+    delete JSONR.values[name];
+    delete JSONR.errors[name];
+};
+
+JSONR.update = function (el, name) {
+    JSONR.bind(HTML.update(el, JSONR.HTML([], [name], [name]).join('')));
+}
+
+JSONR.HTML = function (sb, modelPath, valuePath) {
+    var model = _get(modelPath, JSONR.models);
+    var value = _set(valuePath, _cast(
+        _type(model), _get(valuePath, JSONR.values)
+        ));
+    var view = new JSONR.View(modelPath, valuePath);
+    return view.buffer(sb, view.getName(), model, value);
+};
+
+JSONR.bind =  function (el) {
+    $$('input, textarea, button', el)
+        .bind('mouseover', function (event) {
+            CSS.add (this, ['hover']);
+        })
+        .bind('mouseout', function (event) {
+            CSS.remove (this, ['hover']);
+        })
+        .bind('focus', function (event) {
+            CSS.add (this, ['hover']);
+        })
+        .bind('blur', function (event) {
+            CSS.remove (this, ['hover']);
+        })
+        .bind('mousedown', function (event) {
+            CSS.add (this, ['active']);
+        })
+        .bind('mouseup', function (event) {
+            CSS.remove (this, ['active']);
+        })
+        ;
+};
+
+JSONR.focus = function (path) {
+    var value = _get(path, JSONR.values);
+    if (value != null && typeof value == 'object') {
+        if (typeof value.length == 'undefined') {
+            if (value) {
+                for (var k in value) {
+                    if (typeof value[k] != 'function') {
+                        path.push(k);
+                        return JSONR.focus(path);
+                    }
+                }
+            }
+        } else if (value.length > 0) {
+            path.push(0);
+            return JSONR.focus(path);
+        }
+    } 
+    var el = $(JSON.encode(path));
+    if (el) {
+        if (/(input)|(textarea)|(button)/.test (el.nodeName.toLowerCase())) {
+            el.focus();
+        } else {
+            $$('button', el).selected[0].focus();
         }
     }
 };
 
-JSON.Regular.set = function (ns, v) {
-    eval("this." + ns + " = v;"); // eval is Evil, unless it does Good
-    return v;
-};
-JSON.Regular.test = function (el, v) {
-    this.set(el.id, v); 
-    var s = v.toString();
-    if (el.value != s) {
-        el.value = s; 
-        this.error(el, v); 
-    } else
-        setTimeout(this._this + '.onValid(' + JSON.encode(el.id) + ')', 10);
-};
-JSON.Regular.error = function (el, v) {
-    setTimeout(
-        this._this + '.onInvalid(' 
-        + JSON.encode(el.id) + ', ' 
-        + JSON.encode(v) 
-        + ')', 10
+function _attr (el, name) {
+    return el.getAttribute(name) || el[name];
+}
+
+function _bubble (event) {
+    if (!event) { // IE
+        event = window.event;
+        window.event.cancelBubble = false;
+        return true;
+    } 
+}
+
+JSONR.add = function (el, event) {
+    var view = new JSONR.View(
+        JSON.decode(_attr(el, 'regular')),
+        JSON.decode(el.id)
+        );
+    var name = view.getName();
+    view.modelPath.push(0);
+    var model = _get(view.modelPath, JSONR.models);
+    view.valuePath.push(_set(view.valuePath, _cast(
+        "collection", _get(view.valuePath, JSONR.values)
+        )).length);
+    var value = _set(view.valuePath, _cast(
+        _type(model), _get(view.valuePath, JSONR.values)
+        ));
+    var sb = [];
+    view.buffer(sb, name + 'N', model, value);
+    HTML.insert(el, sb.join(''), 'beforeBegin');
+    JSONR.bind(el);
+    setTimeout('JSONR.focus(' + JSON.encode(view.valuePath) + ')', 0);
+    return _bubble (event);
+}
+
+JSONR.open = function (el, event) {
+    var view = new JSONR.View(
+        JSON.decode(_attr(el, 'regular')),
+        JSON.decode(el.id)
+        );
+    var name = view.getName();
+    var model = _get(view.modelPath, JSONR.models);
+    var value = _set(view.valuePath, _cast(
+        _type(model), _get(view.valuePath, JSONR.values)
+        ));
+    var sb = [];
+    view.buffer(sb, name, model, value);
+    var parent = el.parentNode;
+    HTML.replace(el, sb.join(''));
+    JSONR.bind(parent);
+    setTimeout('JSONR.focus(' + JSON.encode(view.valuePath) + ')', 0);
+    return _bubble (event);
+}
+
+JSONR.put = function (el, event) {
+    var k = '~new';
+    var view = new JSONR.View(
+        JSON.decode(_attr(el, 'regular')),
+        JSON.decode(el.id)
+        );
+    var value = _get(view.valuePath, JSONR.values);
+    if (typeof value[k] != 'undefined') {
+        return;
+    }
+    value[k] = null;
+    var model = _get(view.modelPath, JSONR.models);
+    var name = view.getName();
+    var kModel, vModel;
+    for (kModel in model) {
+        vModel = model[kModel];
+        break;
+    }
+    var sb = [];
+    sb.push('<div class="key">');
+    view.valuePath.push(null);
+    view.valuePath.push('key');
+    view.buffer(sb, name + 'K', kModel, k)
+    view.valuePath.pop();
+    view.valuePath.pop();
+    sb.push('</div><div class="value" key="');
+    sb.push(HTML.cdata(k));
+    sb.push('">');
+    view.valuePath.push(k);
+    view.modelPath.push(kModel);
+    view.buffer(sb, name + 'V', vModel, null);
+    sb.push('</div>');
+    JSONR.bind(HTML.insert(el, sb.join(''), 'beforeBegin'));
+    setTimeout('JSONR.focus(' + JSON.encode(view.valuePath) + ')', 0);
+    return _bubble (event);
+}
+
+JSONR.validate = function () {
+    var modelPath = JSON.decode(_attr(arguments[0], 'regular'));
+    _validate[_type(_get(modelPath,  JSONR.models))].apply(
+        modelPath, arguments
         );
 };
-JSON.Regular.Null = function (el) {
-    var v; 
-    try {
-        v = JSON.decode(el.value);
-    } catch (e) {
-        v = el.value;
-    }
-    this.set(el.id, v);
-};
-JSON.Regular.Boolean = function (el) {
-    this.set(el.id, el.checked);
-};
-JSON.Regular.String = function (el) {
-    this.set(el.id, el.value);
-};
-JSON.Regular.Number = function (el) {
-    this.test(el, parseFloat(el.value));
-};
-JSON.Regular.Integer = function (el) {
-    this.test(el, parseInt(el.value));
-};
-JSON.Regular.Decimal = function (el, pow) {
-    this.test(el, Math.round((parseFloat(el.value)*pow))/pow);
-};
-JSON.Regular.PCRE = function (el, regular) {
-    if (el.value.match(regular) == null) 
-        this.error(el, el.value);
-    else {
-        this.set(el.id, el.value);
-        setTimeout(this._this + '.onValid(' + JSON.encode(el.id) + ')', 1);
-    }
-};
-JSON.Regular.FloatRange = function (el, lower, higher) {
-    var v = parseFloat(el.value);
-    if (v < lower) v = lower; 
-    else if (v > higher) v = higher;
-    this.test(el, v);
-};
-JSON.Regular.IntegerRange = function (el, lower, higher) {
-    var v = parseInt(el.value);
-    if (v < lower) v = lower; 
-    else if (v > higher) v = higher;
-    this.test(el, v);
-};
-JSON.Regular.DecimalRange = function (el, lower, higher, pow) {
-    var v = Math.round((parseFloat(el.value)*pow))/pow;
-    if (v < lower) v = lower;
-    else if (v > higher) v = higher;
-    this.test(el, v);
-};
-JSON.Regular.htmlNull = function (sb, ns, nm, ob) {
-    sb.push('<textarea class="null" rows="4" name="');
-    sb.push(HTML.cdata(nm));
-    sb.push('" id="');
-    sb.push(HTML.cdata(ns));
-    sb.push('" onblur="{');
-    sb.push(this._this);
-    if (ob == null)
-        sb.push('.Null(this);}">null</textarea>');
-    else {
-        sb.push('.Null(this);}">');
-        sb.push(HTML.cdata(JSON.pprint([], ob).join('')));
-        sb.push("</textarea>");
-    }
-    return sb;
-};
-JSON.Regular.htmlBoolean = function (sb, ns, nm, ob) {
-    sb.push('<input class="boolean" name="');
-    sb.push(HTML.cdata(nm));
-    sb.push('" id="');
-    sb.push(HTML.cdata(ns));
-    sb.push('" onclick="{');
-    sb.push(HTML.cdata(this._this));
-    if (ob) {
-        sb.push('.Boolean(this);}" type="checkbox" checked />');
-        this.set(ns, true);
-    } else {
-        sb.push('.Boolean(this);}" type="checkbox" />');
-        this.set(ns, false);
-    }
-    return sb;
-};
-JSON.Regular.htmlString = function (sb, ns, nm, ob) {
-    sb.push('<textarea class="string" rows="4" name="');
-    sb.push(HTML.cdata(nm));
-    sb.push('" id="');
-    sb.push(HTML.cdata(ns));
-    sb.push('" onblur="{');
-    sb.push(HTML.cdata(this._this));
-    if (ob == null) {
-        sb.push('.String(this);}"></textarea>');
-        this.set(ns, "");
-    } else {
-        sb.push('.String(this);}">');
-        sb.push(HTML.cdata(ob));
-        sb.push("</textarea>");
-    } 
-    return sb;
-};
-JSON.Regular.htmlNumber = function (sb, ns, nm, ob, pt) {
-    var decimals = 0, s = pt.toString();
-    sb.push('<input type="text" class="number"');
-    if (ob == null) {
-        this.set(ns, 0);
-        sb.push(' value="0" name="'); 
-    } else {
-        sb.push(' value="');
-        sb.push(ob.toString());
-        sb.push('" name="');
-    }
-    sb.push(HTML.cdata(nm));
-    sb.push('" id="');
-    sb.push(HTML.cdata(ns));
-    if (pt == 0) {
-        sb.push('" onblur="{');
-        sb.push(HTML.cdata(this._this));
-        sb.push(".Number(this));}\" />");
-    } else {
-        sb.push('" size="');
-        sb.push(pt.toString().length);
-        sb.push('" onblur="{');
-        sb.push(HTML.cdata(this._this));
-        if (parseInt(s)==pt) {
-            sb.push(".IntegerRange(this");
-        } else {
-            sb.push(".DecimalRange(this");
-            decimals = s.split('.')[1].length;
-        }
-        if (pt < 0) {
-            sb.push(", ");
-            sb.push(pt);
-            sb.push(", ");
-            sb.push(-pt);
-        } else {
-            sb.push(", 0, ");
-            sb.push(pt);
-        }
-        if (decimals > 0) {
-            for (var i=1, pow=10; i<decimals; i++) pow = pow*10;
-            sb.push(", ");
-            sb.push(pow);
-        }
-        sb.push(');}" />');
-    }
-    return sb;
-};
-JSON.Regular.htmlPCRE = function (sb, ns, nm, ob, pt) {
-    sb.push('<input name="');
-    sb.push(HTML.cdata(nm));
-    sb.push('" id="');
-    sb.push(HTML.cdata((ns=="")?nm:ns));
-    sb.push('" onblur="{');
-    sb.push(HTML.cdata(this._this));
-    sb.push(".PCRE(this, /");
-    sb.push(HTML.cdata(pt));
-    if (ob == null) {
-        sb.push('/);}" type="text"');
-        ob = this.set(ns, "");
-    } else {
-        sb.push('/);}" type="text" value="');
-        sb.push(HTML.cdata(ob));
-        sb.push('"');
-    } 
-    if (ob.match(new RegExp(pt))==null) {
-        sb.push('class="pcre error" />');
-        this.errors += 1;
-    } else
-        sb.push('class="pcre" />');
-    return sb;
-};
-JSON.Regular.htmlCollection = function (sb, md, ns, nm, ob) {
-    sb.push('<div class="collection" id="');
-    sb.push(HTML.cdata(ns));
-    sb.push('">');
-    if (ob != null) for (var i=0, L=ob.length; i<L; i++) 
-        this.htmlValue(sb, md+"[0]", ns+"["+i+"]", nm);
-    sb.push('<div class="column span-2"><button onclick="{');
-    sb.push(HTML.cdata(this._this));
-    sb.push(".htmlAdd(this, &quot;");
-    sb.push(HTML.cdata(md));
-    sb.push("&quot;, &quot;");
-    sb.push(HTML.cdata(ns));
-    sb.push("&quot;, &quot;");
-    sb.push(HTML.cdata(nm));
-    sb.push('&quot;);}">add</button></div></div>');
-    return sb;
-};
-JSON.Regular.htmlRelation = function (sb, md, ns, nm, ob, pt) {
-    //sb.push('<div class="relation ');
-    //sb.push(HTML.cdata(nm));
-    //sb.push('" id="');
-    //sb.push(HTML.cdata(ns));
-    //sb.push('">');
-    if (ob == null) ob = this.set(ns, []);
-    for (var i=0, L=pt.length; i<L; i++) 
-        this.htmlValue(sb, md+"["+i+"]", ns+"["+i+"]", nm+i.toString());
-    //sb.push("</div>");
-    return sb;
-};
-JSON.Regular.htmlDictionary = function (sb, md, ns, k, v) {
-    ;
-};
-JSON.Regular.htmlNamespace = function (sb, md, ns, nm, ob, keys) {
-    if (ob == null) {
-        sb.push('<div class="column span-2">')
-        sb.push('<button onclick="{HTML.replace(this.parentNode, ');
-        sb.push(HTML.cdata(this._this));
-        sb.push(".htmlOpen([], &quot;");
-        sb.push(HTML.cdata(md));
-        sb.push("&quot;, &quot;");
-        sb.push(HTML.cdata(ns));
-        sb.push("&quot;, &quot;");
-        sb.push(HTML.cdata(nm));
-        sb.push("&quot;).join(''));}\" >open</button></div>");
-    } else {
-        for (var i=0, k; k=keys[i]; i++) {
-            this.htmlValue(sb, md + "['" + k + "']", ns + "['" + k + "']", k);
-        }
-    }
-    return sb;
-};
-JSON.Regular.htmlFocus = function (id) {
-    $(id).focus();
-};
-JSON.Regular.htmlAdd = function (el, md, ns, nm) {
-    var id;
-    var ob = eval("this." + ns);
-    if (ob == null) ob = this.set(ns, []);
-    var i = ob.length;
-    var path = ns+"["+i+"]";
-    var pt = eval("this." + md + "[0]");
-    if (typeof pt == "object") {
-        if (pt.length == null) {
-            ob.push({})
-            HTML.insert(el.parentNode, this.htmlValue(
-                [], md + "[0]", path, nm + i.toString()
-                ).join(''), "beforeBegin");
-            for (var k in pt) if (!(typeof pt[k]=="function")) break;
-            id = path + "['" + k + "']";
-        } else {
-            ob.push([]);
-            HTML.insert(el.parentNode, this.htmlValue(
-                [], md + "[0]", path, nm + i.toString()
-                ).join(''), "beforeBegin");
-            id = path + "[0]";
-        }
-    } else {
-        HTML.insert(el.parentNode, this.htmlValue(
-            [], md + "[0]", path, nm + i.toString()
-            ).join(''), "beforeBegin");
-        id = path;
-    }
-    setTimeout('{' + this._this + '.htmlFocus(' 
-        + JSON.encode(id)
-        + ');}', 10);
-};
-JSON.Regular.htmlOpen = function (sb, md, ns, nm) {
-    var pt = eval("this." + md);
-    var ob = eval("this." + ns);
-    if (ob == null) ob = this.set(ns, {});
-    var keys = [], k;
-    for (k in pt) if (!(typeof pt[k]=="function")) keys.push(k);
-    this.htmlNamespace(sb, md, ns, nm, ob, keys);
-    var id = JSON.encode(ns + "['" + keys[0] + "']");
-    setTimeout('{' + this._this + '.htmlFocus(' + id + ');}', 10);
-    return sb;
-};
-JSON.Regular.extensions = {
-    "yyyy-MM-ddTHH:mm:ss": function (sb, ns, nm, ob, pt) {
-        ; // TODO: implement a DateTime pattern
-    }
-};
-JSON.Regular.htmlValue = function (sb, md, ns, nm) {
-    var pt = eval("this." + md); // eval is Evil ...
-    var ob = eval("this." + ns); // ... unless it does Good
-    var template = (
-        this.templates[nm] || this.templates[this.type(pt)] || []);
-    if (template[0]) 
-        sb.push(template[0]);
-    else if (md!="model") {
-        sb.push('<div class="field"><div class="clear">');
-        sb.push(HTML.cdata(nm));
-        sb.push('</div>');
-    }
-    if (template[2]) sb.push(template[2]);
-    switch (typeof pt) {
-    case "boolean": 
-        this.htmlBoolean(sb, ns, nm, ob); break;
-    case "string": ;
-        if (pt=="")
-            this.htmlString(sb, ns, nm, ob);
-        else {
-            var extension = this.extensions[pt] || this.model[pt];
-            if (extension==null)
-                this.htmlPCRE(sb, ns, nm, ob, pt);
-            else if (typeof extension == "function")
-                extension.apply(this, [sb, ns, nm, ob, pt]);
-            else
-                this.htmlValue(sb, "['" + pt + "']", ns, nm)
-        }
-        break;
-    case "number":  
-        this.htmlNumber(sb, ns, nm, ob, pt); break;
-    case "object":
-        if (pt==null) 
-            this.htmlNull(sb, ns, nm, ob);
-        else {
-            var L=pt.length;
-            if (L==null) {
-                var keys = new Array(), k;
-                for (k in pt) if (!(typeof pt[k]=="function")) keys.push(k);
-                if (keys.length == 0) {keys.push(null); pt[".+"] = null;}
-                if (keys.length == 1) 
-                    this.htmlDictionary(sb, md, ns, keys[0], pt[keys[0]])
-                else
-                    this.htmlNamespace(sb, md, ns, nm, ob, keys);
-            } else if (L==1)
-                this.htmlCollection(sb, md, ns, nm, ob);
-            else
-                this.htmlRelation(sb, md, ns, nm, ob, pt);
-        }
-        break;
-    }
-    if (template[3]) sb.push(template[3]);
-    if (template[1]) 
-        sb.push(template[1]);
-    else
-        sb.push('</div>');
-    return sb;
-};
-JSON.Regular.view = function () {
-    return this.htmlValue([], "model", "json", this._this).join('');
-};
-JSON.Regular.onInvalid = function (id, v) {
-    var el = $(id); 
+
+JSONR.onInvalid = function (el, path, invalid) {
     CSS.add(el, ['error']); 
-    if (!this.errors) {
-        el.focus();
-        el.select(); 
-        this.errors[id] = true;
+    var errors = JSONR.errors[path[0]];
+    if (!errors) {
+        errors = {};
+        JSONR.errors[path[0]] = errors;
+        setTimeout('JSONR.focus(' + JSON.encode(path) + ')', 0);
     }
-    if (el.onRegular) el.onRegular(false);
-};
-JSON.Regular.onValid = function (id) {
-    var el = $(id);
+    errors[el.id] = true;
+}
+
+JSONR.onValid = function (el, path) {
     CSS.remove(el, ['error']);
-    if (this.errors[id] == true) delete this.errors[id];
-    if (el.onRegular) el.onRegular(true);
+    var errors = JSONR.errors[path[0]];
+    if (errors[el.id] === true) {
+        delete errors[el.id];
+    }
+    //if (path.length > 0) {
+    //    path.pop();
+    //    var el = $(JSON.encode(path));
+    //    if (el) {
+    //        JSONR.onValid (el, path);
+    //    }
+    //}
 };
-/**
- * <h3>Synopsis</h3>
+
+function _test (el, value) {
+    var path = JSON.decode(el.id);
+    _set(path, value);
+    var s = value.toString();
+    if (el.value != s) {
+        el.value = s; 
+        return _error(el, value); 
+    } else {
+        return _success(el);
+    }
+}
+
+function _error (el, value) {
+    setTimeout('JSONR.onInvalid($(' 
+        + JSON.encode(el.id) + '), ' 
+        + el.id + ', ' 
+        + JSON.encode(value) + ')', 0);
+    return false;
+}
+
+function _success (el) {
+    setTimeout('JSONR.onValid($(' 
+        + JSON.encode(el.id) + '), ' 
+        + el.id + ')', 0);
+    return true;
+}
+
+function _range (value, low, high) {
+    if (typeof low != 'undefined' && value < low) {
+        return low;
+    } else if (typeof high != 'undefined' && value > high) {
+        return high;
+    }
+    return value;
+}
+
+_validate = {
+    'null': function (el, event) {
+        var v; 
+        try {
+            v = JSON.decode(el.value);
+        } catch (e) {
+            v = el.value;
+        }
+        _set(JSON.decode(el.id), v);
+        return _success(el);
+    },
+    'boolean': function (el, event) {
+        _set(JSON.decode(el.id), el.checked);
+        return _success(el);
+    },
+    'string': function (el, event) {
+        _set(JSON.decode(el.id), el.value);
+        return _success(el);
+    },
+    'number': function (el, event, low, high) {
+        return _test(el, _range(parseFloat(el.value), low, high));
+    },
+    'integer': function (el, event, low, high) {
+        return _test(el, _range(parseInt(el.value), low, high));
+    },
+    'decimal': function (el, event, low, high, pow) {
+        return _test(el, Math.round(
+            _range(parseFloat(el.value), low, high)*pow
+            )/pow);
+    },
+    'pcre': function (el, event, regular) {
+        if (el.value.match(regular) === null) 
+            return _error(el, el.value);
+        else {
+            var path = JSON.decode(el.id);
+            _set(path, el.value);
+            return _success(el);
+        }
+    },
+    'dictionary': function () {
+        var mp = this;
+        var model = _get(mp, JSONR.models);
+        var kModel, vModel;
+        for (kModel in model) {
+            vModel = model[kModel];
+        }
+        if (!_validate[_type(kModel)].apply(this, arguments)) {
+            return false;
+        };
+        var el = arguments[0];
+        var vp = JSON.decode(el.id);
+        var newKey = _get(vp, JSONR.values);
+        vp.pop();
+        vp.pop();
+        var value = _get(vp, JSONR.values);
+        while (!/(^|.* )(key)( .*|$)/.test(el.className)) {
+            el = el.parentNode;
+        }
+        el = HTML.next(el);
+        var oldKey = _attr(el, 'key');
+        if (newKey == oldKey) {
+            return true;
+        }
+        value[newKey] = value[oldKey];
+        delete value[oldKey];
+        var view = new JSONR.View(mp, vp);
+        var name = view.getName();
+        vp.push(newKey);
+        mp.push(kModel);
+        var sb = [];
+        sb.push('<div class="value" key="');
+        sb.push(HTML.cdata(newKey));
+        sb.push('">');
+        view.buffer(sb, name + 'V', vModel, value[newKey]);
+        sb.push('</div>');
+        HTML.replace(el, sb.join(''));
+        setTimeout('JSONR.focus(' + JSON.encode(vp) + ')', 0);
+    }
+}
+
+_View = {
+    initialize: function (modelPath, valuePath) {
+        this.modelPath = modelPath || [];
+        this.valuePath = valuePath || [];
+    },
+    getName: function (path) {
+        var suffix = '';
+        var key;
+        var path = (path || this.modelPath.slice(0));
+        while (path.length > 0) {
+            key = path.pop();
+            switch (_type(_get(path, JSONR.models))) {
+            case 'dictionary':
+                if (key === null) {
+                    suffix = 'K' + suffix;
+                } else {
+                    suffix = 'V' + suffix;
+                }
+                break;
+            case 'collection':
+                suffix = 'N' + suffix;
+                break;
+            case 'relation':
+                suffix = key.toString() + suffix;
+                break;
+            default:
+                return key + suffix;
+            }
+        }
+    },
+    types: {},
+    templates: {
+        'namespace': ['<div class="column last clear">', '</div>'],
+        'dictionary': ['<div class="column last clear">', '</div>'],
+        'collection': ['<div class="column last clear">', '</div>'],
+        'relation': ['<div class="column last clear">', '</div>'],
+        'pcre': ['<div class="column span-5">', '</div>'],
+        'string': ['<div class="column span-15 last">', '</div>'],
+        'number': ['<div class="column span-2">', '</div>'],
+        'integer': ['<div class="column span-2">', '</div>'],
+        'decimal': ['<div class="column span-2">', '</div>'],
+        'boolean': ['<div class="column span-1">', '</div>'],
+        'null': ['<div class="column span-15">', '</div>']
+    },
+    template: function (name, type) {
+        if (this.modelPath.length > 1) {
+            t = this.templates[type].slice(0);
+            t[0] = '<div class="field">' + name + ' ' + t[0];
+            t[1] = t[1] + '</div>';
+            return t;
+        } else {
+            return ['', ''];
+        }
+    },
+    buffer: function (sb, name, model, value) {
+        var type = _type(model);
+        var template = JSONR.templates[name] || this.template(name, type);
+        sb.push(template[0]);
+        this.types[type].apply(this, arguments);
+        sb.push(template[1]);
+        return sb;
+    },
+    bufferAttrs: function (sb, name) {
+        var id = JSON.encode(this.valuePath);
+        sb.push(HTML.cdata(name));
+        sb.push('" id="');
+        sb.push(HTML.cdata(id));
+        sb.push('" regular="');
+        sb.push(HTML.cdata(JSON.encode(this.modelPath)));
+        return id;
+    },
+    bufferNumber: function (sb, name, model, value) {
+        if (value == null) {
+            _set(this.valuePath, 0);
+            sb.push('<input type="text" class="number" value="0" name="');
+        } else {
+            sb.push('<input type="text" class="number" value="');
+            sb.push(value.toString());
+            sb.push('" name="');
+        }
+        this.bufferAttrs(sb, name);
+    }
+};
+
+_View.types['namespace'] = function (sb, name, model, value) {
+    if (value) {
+        value = _set(this.valuePath, _cast('namespace', value));
+        for (var k in model) {
+            if (typeof model[k] != 'function') {
+                this.modelPath.push(k);
+                this.valuePath.push(k);
+                this.buffer(sb, k, model[k], value[k]);
+                this.modelPath.pop();
+                this.valuePath.pop();
+            }
+        }
+    } else {
+        value = _set(this.valuePath, null);
+        sb.push('<div class="namespace column span-2 ');
+        var id = this.bufferAttrs(sb, name);
+        sb.push(
+            '"><button onclick="return JSONR.open(this.parentNode, event)">'
+            + 'open'
+            + '</button></div>'
+            );
+    }
+};
+
+
+_View.types['dictionary'] = function (sb, name, model, value) {
+    var k, kModel, vModel;
+    for (k in model) {
+        if (typeof model[k] != 'function') {
+            kModel = k;
+            vModel = model[k];
+            break;
+        }
+    }
+    var vp = this.valuePath;
+    value = _set(vp, _cast('dictionary', value));
+    var fun = function () {};
+    value[null] = fun;
+    fun['key'] = _cast(_type(kModel), null); 
+    var kp = vp.slice(0);
+    kp.push(null);
+    kp.push('key');
+    for (k in value) {
+        if (typeof value[k] != 'function') {
+            sb.push('<div class="key">');
+            this.valuePath = kp;
+            this.buffer(sb, name + 'K', kModel, k)
+            this.valuePath = vp;
+            sb.push('</div><div class="value" key="');
+            sb.push(HTML.cdata(k));
+            sb.push('">');
+            this.valuePath.push(k);
+            this.modelPath.push(kModel);
+            this.buffer(sb, name + 'V', vModel, value[k]);
+            this.modelPath.pop();
+            this.valuePath.pop();
+            sb.push('</div>');
+        }
+    }
+    sb.push('<div class="dictionary column span-2 ');
+    var id = this.bufferAttrs(sb, name);
+    sb.push(
+        '"><button onclick="return JSONR.put(this.parentNode, event)"'
+        + '>put</button></div>'
+        );
+};
+
+_View.types['collection'] = function (sb, name, model, value) {
+    if (value) {
+        value = _set(this.valuePath, _cast('collection', value));
+        var itemName = name + 'N';
+        this.modelPath.push(0);
+        for (var i=0, L=value.length; i<L; i++) {
+            this.valuePath.push(i);
+            this.buffer(sb, itemName, model[0], value[i]);
+            this.valuePath.pop();
+        }
+        this.modelPath.pop();
+    }
+    sb.push('<div class="collection column span-2 ');
+    var id = this.bufferAttrs(sb, name);
+    sb.push(
+        '"><button onclick="return JSONR.add(this.parentNode, event)"'
+        + '>add</button></div>'
+        );
+};
+
+_View.types['relation'] = function (sb, name, model, value) {
+    value = _set(this.valuePath, _cast('relation', value));
+    for (var i=0, L=model.length; i<L; i++) {
+        this.modelPath.push(i);
+        this.valuePath.push(i);
+        this.buffer(sb, name + i.toString(), model[i], value[i]);
+        this.valuePath.pop();
+        this.modelPath.pop();
+    }
+};
+
+_View.types['pcre'] = function (sb, name, model, value) {
+    value = _set(this.valuePath, _cast('pcre', value));
+    sb.push('<input type="text" name="');
+    var id = this.bufferAttrs(sb, name);
+    sb.push('" onblur="return JSONR.validate(this, event, new RegExp(');
+    sb.push(HTML.cdata(JSON.encode(model)));
+    sb.push('));" value="');
+    sb.push(HTML.cdata(value));
+    if (value.match(new RegExp(model)) == null) {
+        sb.push('" class="pcre error" />');
+        JSONR.errors[this.valuePath[0]][id] = true;
+    } else {
+        sb.push('" class="pcre" />');
+    }
+};
+
+_View.types['number'] = function (sb, name, model, value) {
+    value = _set(this.valuePath, _cast('number', value));
+    this.bufferNumber (sb, name, model, value);
+    sb.push('" onblur="return JSONR.validate(this, event)" />');
+}
+    
+_View.types['integer'] = function (sb, name, model, value) {
+    value = _set(this.valuePath, _cast('integer', value));
+    this.bufferNumber (sb, name, model, value);
+    if (model < 0) {
+        sb.push('" onblur="return JSONR.validate(this, event, ');
+        sb.push(model);
+        sb.push(', ');
+        sb.push(-model);
+    } else {
+        sb.push('" onblur="return JSONR.validate(this, event, 0, ');
+        sb.push(model);
+    }
+    sb.push(')" />');
+};
+    
+_View.types['decimal'] = function (sb, name, model, value) {
+    value = _set(this.valuePath, _cast('decimal', value));
+    var pow = 10, decimals = model.toString().split('.')[1].length;
+    for (var i=1; i<decimals; i++) {
+        pow = pow*10;
+    }
+    var precision = (1/pow);
+    this.bufferNumber (sb, name, model, value);
+    if (model < 0) {
+        sb.push('" onblur="return JSONR.validate(this, event, ');
+        sb.push(model+precision);
+        sb.push(', ');
+        sb.push(-model-precision);
+    } else {
+        sb.push('" onblur="return JSONR.validate(this, event, 0, ');
+        sb.push(model-precision);
+    }
+    sb.push(', ');
+    sb.push(pow);
+    sb.push(')" />');
+};    
+
+_View.types['string'] = function (sb, name, model, value) {
+    value = _set(this.valuePath, _cast('string', value));
+    sb.push('<textarea class="string" rows="4" name="');
+    this.bufferAttrs(sb, name);
+    sb.push('" onblur="return JSONR.validate(this, event)" >');
+    if (value == null) {
+        _set(this.valuePath, '');
+    } else {
+        sb.push(HTML.cdata(value));
+    } 
+    sb.push('</textarea>');
+};
+
+_View.types['boolean'] = function (sb, name, model, value, template) {
+    value = _set(this.valuePath, _cast('boolean', value));
+    sb.push('<input type="checkbox" class="boolean" name="');
+    this.bufferAttrs(sb, name);
+    sb.push('" onclick="return JSONR.validate(this, event)" ');
+    if (value === true) {
+        sb.push('checked />');
+        _set(this.valuePath, true);
+    } else {
+        sb.push('/>');
+        _set(this.valuePath, false);
+    }
+};
+
+_View.types['null'] = function (sb, name, model, value, template) {
+    sb.push('<textarea class="null" rows="4" name="');
+    this.bufferAttrs(sb, name);
+    if (value == null)
+        sb.push(
+            '" onblur="return JSONR.validate(this, event)"'
+            + ' >null</textarea>'
+            );
+    else {
+        sb.push('" onblur="return JSONR.validate(this, event)" >');
+        sb.push(HTML.cdata(JSON.pprint([], value).join('')));
+        sb.push("</textarea>");
+    }
+};
+
+JSONR.View = Protocols(_View);
+
+return JSONR;
+
+})();
+
+/*
+ * Synopsis
+ *
+ * Add a new model and value to the ones controlled by JSONR:
  * 
- *<pre>Control = Protocols(JSON.Regular);
- *var control = new Control("control", {
- *     "an": "", "object": 10.01 "model": [true, false]
- *     });
- *HTML.update($('view'), control.view());</pre>
+ *     JSONR.control('test', {".+$": [100]}, {});
  * 
- * <h3>Note About This Implementation</h3>
+ * Update the document with a regular input view:
  * 
- * <p>You will find no DOM manipulations here, just better conventions and
- * a few good conveniences for HTML and CSS applications.</p>
- * 
- * <p>JSON.Regular implements an controller that regenerates HTML view from
- * two JavaScript object instances: an instance and its model expressed
- * as a regular JSON expression.</p>
- * 
- * <p>Instead of getting tangled in non-trivial DOM manipulations, CSS 
- * stylesheets and HTML templates are leveraged with Regular JSON 
- * expressions to produce consistant and relevant user interfaces.</p>
+ *     JSONR.update($('view'), 'test') // apply ...
  * 
  */
-
