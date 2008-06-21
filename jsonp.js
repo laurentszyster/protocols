@@ -49,7 +49,7 @@ JSON.pprint = (function () {
                 if (indent) {
                     indent += '  ';
                 } else
-                    indent = '\r\n  ';
+                    indent = '\n  ';
                 for (k in value) {
                     if (typeof value[k] != 'function') {
                         sb.push (indent);
@@ -90,7 +90,7 @@ JSON.pprint = (function () {
                     if (indent) {
                         indent += '  ';
                     } else
-                        indent = '\r\n  ';
+                        indent = '\n  ';
                     sb.push ('[');
                     for (i=0; i<L; i++) {
                         sb.push (indent);
