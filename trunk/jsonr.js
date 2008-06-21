@@ -129,6 +129,10 @@ var JSONR = {
     errors: {},
     extensions: {},
     templates: {},
+    texts: {
+    	'add': 'add',
+    	'open': 'open'
+    },
     type: _type,
     cast: _cast
 };
@@ -236,8 +240,7 @@ JSONR.add = function (el, event) {
         ));
     var sb = [];
     view.buffer(sb, name + 'N', model, value);
-    HTML.insert(el, sb.join(''), 'beforeBegin');
-    JSONR.bind(el);
+    JSONR.bind(HTML.insert(el, sb.join(''), 'beforeBegin'));
     setTimeout('JSONR.focus(' + JSON.encode(view.valuePath) + ')', 0);
     return _bubble (event);
 }
@@ -249,14 +252,13 @@ JSONR.open = function (el, event) {
         );
     var name = view.getName();
     var model = _get(view.modelPath, JSONR.models);
+    var type = _type(model);
     var value = _set(view.valuePath, _cast(
-        _type(model), _get(view.valuePath, JSONR.values)
+        type, _get(view.valuePath, JSONR.values)
         ));
     var sb = [];
-    view.buffer(sb, name, model, value);
-    var parent = el.parentNode;
-    HTML.replace(el, sb.join(''));
-    JSONR.bind(parent);
+    view.types[type].apply(view, [sb, name, model, value]);
+    JSONR.bind(HTML.replace(el, sb.join('')));
     setTimeout('JSONR.focus(' + JSON.encode(view.valuePath) + ')', 0);
     return _bubble (event);
 }
@@ -267,20 +269,31 @@ JSONR.put = function (el, event) {
         JSON.decode(_attr(el, 'regular')),
         JSON.decode(el.id)
         );
-    var value = _get(view.valuePath, JSONR.values);
-    if (typeof value[k] != 'undefined') {
-        return;
-    }
-    value[k] = null;
     var model = _get(view.modelPath, JSONR.models);
-    var name = view.getName();
     var kModel, vModel;
     for (kModel in model) {
         vModel = model[kModel];
         break;
     }
+    var kModel, vModel;
+    for (kModel in model) {
+        vModel = model[kModel];
+        break;
+    }
+    var value = _get(view.valuePath, JSONR.values);
+    if (value === null || typeof value == 'undefined') {
+        var vp = view.valuePath;
+        value = _set(vp, _cast('dictionary', value));
+        var fun = function () {};
+        value[null] = fun;
+        fun['key'] = _cast(_type(kModel), null); 
+    } else if (typeof value[k] != 'undefined') {
+        return;
+    }
+    value[k] = null;
+    var name = view.getName();
     var sb = [];
-    sb.push('<div class="key">');
+    sb.push('<div class="pair"><div class="key">');
     view.valuePath.push(null);
     view.valuePath.push('key');
     view.buffer(sb, name + 'K', kModel, k)
@@ -292,7 +305,7 @@ JSONR.put = function (el, event) {
     view.valuePath.push(k);
     view.modelPath.push(kModel);
     view.buffer(sb, name + 'V', vModel, null);
-    sb.push('</div>');
+    sb.push('</div></div>');
     JSONR.bind(HTML.insert(el, sb.join(''), 'beforeBegin'));
     setTimeout('JSONR.focus(' + JSON.encode(view.valuePath) + ')', 0);
     return _bubble (event);
@@ -447,7 +460,7 @@ _validate = {
     }
 }
 
-_View = {
+JSONR.View = {
     initialize: function (modelPath, valuePath) {
         this.modelPath = modelPath || [];
         this.valuePath = valuePath || [];
@@ -479,10 +492,10 @@ _View = {
     },
     types: {},
     templates: {
-        'namespace': ['<div class="column last clear">', '</div>'],
-        'dictionary': ['<div class="column last clear">', '</div>'],
-        'collection': ['<div class="column last clear">', '</div>'],
-        'relation': ['<div class="column last clear">', '</div>'],
+        'namespace': ['<div class="column span-15 last">', '</div>'],
+        'dictionary': ['<div class="column span-15 last">', '</div>'],
+        'collection': ['<div class="column span-15 last">', '</div>'],
+        'relation': ['<div class="field">', '</div>'],
         'pcre': ['<div class="column span-5">', '</div>'],
         'string': ['<div class="column span-15 last">', '</div>'],
         'number': ['<div class="column span-2">', '</div>'],
@@ -492,11 +505,19 @@ _View = {
         'null': ['<div class="column span-15">', '</div>']
     },
     template: function (name, type) {
-        if (this.modelPath.length > 1) {
-            t = this.templates[type].slice(0);
-            t[0] = '<div class="field">' + name + ' ' + t[0];
-            t[1] = t[1] + '</div>';
-            return t;
+        var L = this.modelPath.length;
+        if (L > 1) {
+            switch (_type(_get(this.modelPath.slice(0, L-1), JSONR.models))) {
+                case 'relation':
+                case 'collection':
+                case 'dictionary':
+                    return this.templates[type];
+                default:
+                    t = this.templates[type].slice(0);
+                    t[0] = '<div class="field">' + name + ' ' + t[0];
+                    t[1] = t[1] + '</div>';
+                    return t;
+            }
         } else {
             return ['', ''];
         }
@@ -505,7 +526,7 @@ _View = {
         var type = _type(model);
         var template = JSONR.templates[name] || this.template(name, type);
         sb.push(template[0]);
-        this.types[type].apply(this, arguments);
+        (this.types[name] || this.types[type]).apply(this, arguments);
         sb.push(template[1]);
         return sb;
     },
@@ -528,35 +549,51 @@ _View = {
             sb.push('" name="');
         }
         this.bufferAttrs(sb, name);
-    }
-};
-
-_View.types['namespace'] = function (sb, name, model, value) {
-    if (value) {
-        value = _set(this.valuePath, _cast('namespace', value));
+    },
+    order: function (model) {
+        var names = {
+            'simple': [],
+            'relation': [],
+            'string': [],
+            'namespace': [],
+            'dictionary': [],
+            'collection': []
+        }
         for (var k in model) {
             if (typeof model[k] != 'function') {
-                this.modelPath.push(k);
-                this.valuePath.push(k);
-                this.buffer(sb, k, model[k], value[k]);
-                this.modelPath.pop();
-                this.valuePath.pop();
+                (names[_type(model[k])]||names['simple']).push(k);
             }
+        };
+        var r = [];
+        for (var n in names) {
+            r = r.concat(names[n]);
         }
-    } else {
-        value = _set(this.valuePath, null);
-        sb.push('<div class="namespace column span-2 ');
-        var id = this.bufferAttrs(sb, name);
-        sb.push(
-            '"><button onclick="return JSONR.open(this.parentNode, event)">'
-            + 'open'
-            + '</button></div>'
-            );
+        return r;
     }
 };
 
+JSONR.View.types['namespace'] = function (sb, name, model, value) {
+    if (value) {
+        value = _set(this.valuePath, _cast('namespace', value));
+        var names = this.order(model);
+        for (var i=0, k; k=names[i]; i++) {
+            this.modelPath.push(k);
+            this.valuePath.push(k);
+            this.buffer(sb, k, model[k], value[k]);
+            this.modelPath.pop();
+            this.valuePath.pop();
+        }
+    } else {
+        // value = _set(this.valuePath, null);
+        sb.push('<div class="namespace column span-2 ');
+        var id = this.bufferAttrs(sb, name);
+        sb.push('"><button onclick="return JSONR.open(this.parentNode, event)">');
+        sb.push(JSON.texts['open']);
+        sb.push('</button></div>');
+    }
+};
 
-_View.types['dictionary'] = function (sb, name, model, value) {
+JSONR.View.types['dictionary'] = function (sb, name, model, value) {
     var k, kModel, vModel;
     for (k in model) {
         if (typeof model[k] != 'function') {
@@ -565,29 +602,33 @@ _View.types['dictionary'] = function (sb, name, model, value) {
             break;
         }
     }
-    var vp = this.valuePath;
-    value = _set(vp, _cast('dictionary', value));
-    var fun = function () {};
-    value[null] = fun;
-    fun['key'] = _cast(_type(kModel), null); 
-    var kp = vp.slice(0);
-    kp.push(null);
-    kp.push('key');
-    for (k in value) {
-        if (typeof value[k] != 'function') {
-            sb.push('<div class="key">');
-            this.valuePath = kp;
-            this.buffer(sb, name + 'K', kModel, k)
-            this.valuePath = vp;
-            sb.push('</div><div class="value" key="');
-            sb.push(HTML.cdata(k));
-            sb.push('">');
-            this.valuePath.push(k);
-            this.modelPath.push(kModel);
-            this.buffer(sb, name + 'V', vModel, value[k]);
-            this.modelPath.pop();
-            this.valuePath.pop();
-            sb.push('</div>');
+    if (value !== null && typeof value != 'undefined') {
+        var vp = this.valuePath;
+        value = _set(vp, _cast('dictionary', value));
+        var fun = function () {};
+        value[null] = fun;
+        fun['key'] = _cast(_type(kModel), null); 
+        var kp = vp.slice(0);
+        kp.push(null);
+        kp.push('key');
+        for (k in value) {
+            if (typeof value[k] != 'function') {
+                sb.push('<div class="pair"><div class="key">');
+                this.valuePath = kp;
+                // this.modelPath.push(kModel);
+                this.buffer(sb, name + 'K', kModel, k)
+                // this.modelPath.pop();
+                this.valuePath = vp;
+                sb.push('</div><div class="value" key="');
+                sb.push(HTML.cdata(k));
+                sb.push('">');
+                this.valuePath.push(k);
+                this.modelPath.push(kModel);
+                this.buffer(sb, name + 'V', vModel, value[k]);
+                this.modelPath.pop();
+                this.valuePath.pop();
+                sb.push('</div></div>');
+            }
         }
     }
     sb.push('<div class="dictionary column span-2 ');
@@ -598,7 +639,7 @@ _View.types['dictionary'] = function (sb, name, model, value) {
         );
 };
 
-_View.types['collection'] = function (sb, name, model, value) {
+JSONR.View.types['collection'] = function (sb, name, model, value) {
     if (value) {
         value = _set(this.valuePath, _cast('collection', value));
         var itemName = name + 'N';
@@ -612,13 +653,12 @@ _View.types['collection'] = function (sb, name, model, value) {
     }
     sb.push('<div class="collection column span-2 ');
     var id = this.bufferAttrs(sb, name);
-    sb.push(
-        '"><button onclick="return JSONR.add(this.parentNode, event)"'
-        + '>add</button></div>'
-        );
+    sb.push('"><button onclick="return JSONR.add(this.parentNode, event)">');
+    sb.push(JSONR.texts['add']);
+    sb.push('</button></div>');
 };
 
-_View.types['relation'] = function (sb, name, model, value) {
+JSONR.View.types['relation'] = function (sb, name, model, value) {
     value = _set(this.valuePath, _cast('relation', value));
     for (var i=0, L=model.length; i<L; i++) {
         this.modelPath.push(i);
@@ -629,7 +669,7 @@ _View.types['relation'] = function (sb, name, model, value) {
     }
 };
 
-_View.types['pcre'] = function (sb, name, model, value) {
+JSONR.View.types['pcre'] = function (sb, name, model, value) {
     value = _set(this.valuePath, _cast('pcre', value));
     sb.push('<input type="text" name="');
     var id = this.bufferAttrs(sb, name);
@@ -645,13 +685,13 @@ _View.types['pcre'] = function (sb, name, model, value) {
     }
 };
 
-_View.types['number'] = function (sb, name, model, value) {
+JSONR.View.types['number'] = function (sb, name, model, value) {
     value = _set(this.valuePath, _cast('number', value));
     this.bufferNumber (sb, name, model, value);
     sb.push('" onblur="return JSONR.validate(this, event)" />');
 }
     
-_View.types['integer'] = function (sb, name, model, value) {
+JSONR.View.types['integer'] = function (sb, name, model, value) {
     value = _set(this.valuePath, _cast('integer', value));
     this.bufferNumber (sb, name, model, value);
     if (model < 0) {
@@ -666,7 +706,7 @@ _View.types['integer'] = function (sb, name, model, value) {
     sb.push(')" />');
 };
     
-_View.types['decimal'] = function (sb, name, model, value) {
+JSONR.View.types['decimal'] = function (sb, name, model, value) {
     value = _set(this.valuePath, _cast('decimal', value));
     var pow = 10, decimals = model.toString().split('.')[1].length;
     for (var i=1; i<decimals; i++) {
@@ -688,7 +728,7 @@ _View.types['decimal'] = function (sb, name, model, value) {
     sb.push(')" />');
 };    
 
-_View.types['string'] = function (sb, name, model, value) {
+JSONR.View.types['string'] = function (sb, name, model, value) {
     value = _set(this.valuePath, _cast('string', value));
     sb.push('<textarea class="string" rows="4" name="');
     this.bufferAttrs(sb, name);
@@ -701,7 +741,7 @@ _View.types['string'] = function (sb, name, model, value) {
     sb.push('</textarea>');
 };
 
-_View.types['boolean'] = function (sb, name, model, value, template) {
+JSONR.View.types['boolean'] = function (sb, name, model, value) {
     value = _set(this.valuePath, _cast('boolean', value));
     sb.push('<input type="checkbox" class="boolean" name="');
     this.bufferAttrs(sb, name);
@@ -715,7 +755,7 @@ _View.types['boolean'] = function (sb, name, model, value, template) {
     }
 };
 
-_View.types['null'] = function (sb, name, model, value, template) {
+JSONR.View.types['null'] = function (sb, name, model, value) {
     sb.push('<textarea class="null" rows="4" name="');
     this.bufferAttrs(sb, name);
     if (value == null)
@@ -730,7 +770,7 @@ _View.types['null'] = function (sb, name, model, value, template) {
     }
 };
 
-JSONR.View = Protocols(_View);
+JSONR.View = Protocols(JSONR.View);
 
 return JSONR;
 
