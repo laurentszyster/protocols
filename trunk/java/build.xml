@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="protocols" default="debug">
+  <property file="build.properties"/>
+  <target name="debug">
+    <javac 
+       srcdir="src"
+       destdir="bin"
+       debug="on"
+       source="1.5"
+       classpath="lib/smalljs.jar;lib/xp.jar"
+    />
+    <jar 
+      jarfile="protocols.jar" 
+      basedir="bin"
+      />
+  </target>
+  <target name="dist">
+    <javac 
+       srcdir="src"
+       destdir="bin"
+       debug="off"
+       source="1.5"
+       classpath="lib/smalljs.jar;lib/xp.jar"
+    />
+    <jar 
+      jarfile="protocols-${version}.jar" 
+      basedir="bin"
+      />
+  </target>
+</project>
