@@ -1930,7 +1930,7 @@ public final class JSON {
         } else if (value instanceof Character) { 
             strb(sb, ((Character) value).toString());
         } else if (value instanceof Native) {
-        	((Native) value).toJSON(sb);
+        	((Native) value).toJSON(sb, indent);
         } else if (value instanceof Iterator) { 
             outline(sb, (Iterator) value, indent);
         } else if (value instanceof Map) {
