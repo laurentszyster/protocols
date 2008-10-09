@@ -65,6 +65,24 @@ public final class Objects {
     }
     
     /**
+     * A convenience to extend a <code>List</code> from an <code>Iterator</code>
+     * of <code>Object</code>.
+     * 
+     * @pre List sequence = Objects.extend(
+     *     new ArrayList(), Strings.split("a,b,c", ',')
+     *     );
+     * 
+     * @param items to add in the sequence
+     * @return the extended <code>List</code>
+     */
+    public static final List extend (List sequence, Iterator items) {
+        while (items.hasNext()) {
+            sequence.add(items.next());
+        }
+        return sequence;
+    }
+    
+    /**
      * A convenience to create an <code>ArrayList</code> from an array of 
      * <code>Object[]</code>.
      * 
