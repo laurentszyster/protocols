@@ -490,23 +490,26 @@ public final class XML {
                 
                 _children = element.children.iterator();
                 _names = names;
-                try {
-                    next();
-                } catch (NoSuchElementException e) {
-                    _next = null;
-                }
+                _next();
             };
             public boolean hasNext() {
-                return (_next == null);
+                return (_next != null);
             }
-            public Element next() {
-                Element result = _next;
+            private void _next() {
                 while (_children.hasNext()) {
                     _next = (Element) _children.next();
                     if (_names.contains(_next.name))
-                        return result;
+                        return;
                 }
-                throw new NoSuchElementException();
+                _next = null;
+            }
+            public Element next() {
+                if (_next == null) {
+                    throw new NoSuchElementException();
+                }
+                Element result = _next;
+                _next();
+                return result;
             }
             public void remove() {} // wtf?
         }
@@ -521,9 +524,7 @@ public final class XML {
          *e.addChild("zero");
          *e.addChild("one");
          *e.addChild("two");
-         *var named = e.getChildren(
-         *    Simple.set(["zero", "two", "four"])
-         *    );
+         *var named = e.getChildren(Objects.set(["zero", "two", "four"]));
          *return (
          *    named.next().toString().equals("<zero></zero>") &&
          *    named.next().toString().equals("<two></two>") &&
@@ -532,6 +533,29 @@ public final class XML {
          */
         public Iterator<Element> getChildren (HashSet names) {
             return new ChildrenIterator(this, names);
+        }
+        /**
+         * A convenience to iterate through named children.
+         * 
+         * @param names set of the children to iterate.
+         * @return an iterator of <code>XML.Element</code>
+         * 
+         * @test var e = new XML.Element("tag");
+         *e.addChild("zero");
+         *e.addChild("one");
+         *e.addChild("two");
+         *e.addChild("one");
+         *e.addChild("two");
+         *e.addChild("three");
+         *var named = e.getChildren("one");
+         *return (
+         *    named.next().toString().equals("<one></one>") &&
+         *    named.next().toString().equals("<one></one>") &&
+         *    named.hasNext() == false
+         *    );
+         */
+        public Iterator<Element> getChildren (String names) {
+            return new ChildrenIterator(this, Objects.set(names));
         }
         /**
          * A convenience to access an attribute <code>String</code> value
