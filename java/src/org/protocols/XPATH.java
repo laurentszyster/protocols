@@ -17,6 +17,7 @@ Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 package org.protocols;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Arrays;
 import java.util.Locale;
 import java.io.IOException;
@@ -35,6 +36,7 @@ import com.jclark.xml.parse.OpenEntity;
 import com.jclark.xml.parse.StartElementEvent;
 import com.jclark.xml.parse.base.ApplicationImpl;
 
+import org.simple.Objects;
 import org.protocols.XML;
 
 /**
@@ -42,273 +44,385 @@ import org.protocols.XML;
  * outlining and collection convenience, just enough to develop fast and lean 
  * XML data pipelining processors.
  * 
- * XPATH feeds suite well state-full applications with asynchronous I/O, as they
- * enable an asynchronous network peer to produce chunks of processed data. 
+ * XPATH feeds would suite well state-full applications with asynchronous I/O, 
+ * alas if XP can implement an incremental parser it does not provide the 
+ * implementation offered by its C successor, Expat. 
+ * 
+ * So, until someone comes up with JNI bindings for Expat, this will stay a
+ * synchronous XPATH feed processor .-( 
  * 
  */
 public class XPATH {
-	public static final class Expression {
-		public HashMap<String,String> qualifiers;
-		public int length;
-		public String[] paths;
-		public String[] values;
-		public Expression (HashMap<String,String> qualifiers) {
-			length = qualifiers.size();
-			paths = new String[length];
-			qualifiers.keySet().toArray(paths);
-			Arrays.sort(paths);
-			values = new String[length];
-			for (int i=0; i<length; i++) {
-				values[i] = qualifiers.get(paths[i]);
-			}
-		}
-		public final String toString() {
-			StringBuilder sb = new StringBuilder();
-			sb.append("[");
-			sb.append(paths[0]);
-			if (values[0] == null || values[0].equals("")) {
-				sb.append("=\"");
-				sb.append(values[0]);
-				sb.append("\"");
-			}
-			for (int i=1; i<length; i++) {
-				sb.append(" and ");
-				sb.append(paths[i]);
-				if (values[i] == null || values[i].equals("")) {
-					sb.append("=\"");
-					sb.append(values[i]);
-					sb.append("\"");
-				}
-			}
-			sb.append("]");
-			return sb.toString();
-		}
-		public final boolean eval (String[] values) {
-			for (int i=0; i<length; i++) {
-				if (values[i] == null || !values[i].equals(this.values[i])) {
-					return false;
-				}
-			}
-			return true;
-		}
-	}
-    public static abstract class Feed {
-    	protected String path;
-    	protected StringWriter cdata = null;
-    	public String[] attributes = null;
-    	public Feed (String path) {
-    		this.path = path;
-    	}
-    	public abstract void handleStart ();
-    	public abstract void handleAttribute (String name, String value);
-    	public abstract void handleText (String text);
-    	public abstract void handleEnd (Feed[] stack, int depth);
+    public static interface Feed {
+        public void start(Feeds feeds);
+        public void end(Feeds feeds);
     }
-    protected static class FeedNull extends Feed {
-    	public FeedNull (String path) {
-    		super(path);
-    	}
-    	public final void handleStart () {};
-    	public final void handleAttribute (String name, String value) {};
-    	public final void handleText (String text) {};
-    	public final void handleEnd (Feed[] stack, int depth) {};
+    protected static abstract class _Abstract {
+        protected String path;
+        protected StringWriter cdata = null;
+        protected boolean attributes = false;
+        public Feed handle = null;
+        public _Abstract (String path) {
+            this.path = path;
+        }
+        public abstract void handleStart (Feeds feeds);
+        public abstract void handleEnd (Feeds feeds);
     }
-    public static abstract class FeedBase extends Feed {
-    	public HashMap<String,Integer> paths = null;
-    	public String[] data;
-    	public String[] qualifiers;
-    	public FeedBase (String path, String[] paths) {
-    		super(path);
-    		cdata = new StringWriter();
-    		this.path = path;
-    		this.paths = new HashMap();
-    		data = new String[paths.length];
-    		for (int i=0; i<data.length; i++) {
-    			this.paths.put(paths[i], i);
-    		}
-    	}
-    	public final void handleStart () {
-    		for (int i=0, L=data.length; i<L; i++) {
-    			data[i] = null;
-    		}
-    	};
-    	public final void handleAttribute (String name, String value) {
-    		data[paths.get(name)] = value;
-    	};
-    	public final void handleText (String text) {
-    		data[paths.get("")] = text;
-    	};
+    protected static class _Pass extends _Abstract {
+        public _Pass (String path) {
+            super(path);
+        }
+        @Override
+        public final void handleStart (Feeds feeds) {}
+        @Override
+        public final void handleEnd (Feeds feeds) {}
     }
-    protected static final class FeedRelative extends Feed {
-    	public FeedBase base;
-    	public FeedRelative (String path, FeedBase base) {
-    		super(path);
-    		cdata = new StringWriter();
-    		this.base = base;
-    	}
-    	public final void handleStart () {}
-    	public final void handleAttribute (String name, String value) {
-    		String relative = path + "/@" + name;
-    		if (base.paths.containsKey(relative)) {
-    			base.handleAttribute(relative, value);
-    		}
-    	}
-    	public final void handleText (String text) {
-    		if (base.paths.containsKey(path)) {
-    			base.handleAttribute(path, text);
-    		}
-    	}
-    	public final void handleEnd (Feed[] stack, int depth) {}
+    protected static class _Branch extends _Abstract {
+        public _Branch trunk; 
+        protected String[] _paths;
+        protected int[] _indexes;
+        protected int _text = -1;
+        public _Branch (String path, String[] paths, Feeds feeds) {
+            super(path);
+            _paths = paths;
+            _indexes = new int[paths.length];
+            for (int i=0; i<_paths.length; i++) {
+                _indexes[i] = feeds.values.get(path + paths[i]);
+                if (paths[i].equals("")) {
+                    _text = _indexes[i];
+                }
+            }
+            attributes = (
+                _indexes.length > 1 || (_indexes.length == 1 && _text == -1) 
+                );
+        }
+        @Override
+        public final void handleStart (Feeds feeds) {
+            if (_text > -1) {
+                cdata = new StringWriter();
+            }
+            String[] data = feeds.data;
+            for (int i=0, L=_indexes.length; i<L; i++) {
+                data[_indexes[i]] = null;
+            }
+        }
+        @Override
+        public final void handleEnd (Feeds feeds) {
+            if (handle != null) {
+                handle.end(feeds);
+            }
+        }
     }
-    public static final class FeedParser extends ApplicationImpl {
-        protected HashMap<String,Feed> feeds = new HashMap();
+    protected static final class _Expression {
+        protected int _length;
+        protected String[] _paths;
+        protected String[] _values;
+        protected int[] _indexes;
+        protected _Branch _branch;
+        public _Expression (
+            HashMap<String,String> qualifiers, _Branch branch, Feeds feeds
+            ) {
+            _branch = branch;
+            _length = qualifiers.size();
+            _paths = new String[_length];
+            qualifiers.keySet().toArray(_paths);
+            Arrays.sort(_paths);
+            _values = new String[_length];
+            _indexes = new int[_length];
+            for (int i=0; i<_length; i++) {
+                _values[i] = qualifiers.get(_paths[i]);
+                _indexes[i] = feeds.values.get(_paths[i]);
+            }
+        }
+        public final String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("[");
+            sb.append(_paths[0]);
+            if (_values[0] == null || _values[0].equals("")) {
+                sb.append("=\"");
+                sb.append(_values[0]);
+                sb.append("\"");
+            }
+            for (int i=1; i<_length; i++) {
+                sb.append(" and ");
+                sb.append(_paths[i]);
+                if (_values[i] == null || _values[i].equals("")) {
+                    sb.append("=\"");
+                    sb.append(_values[i]);
+                    sb.append("\"");
+                }
+            }
+            sb.append("]");
+            return sb.toString();
+        }
+        public final boolean eval (String[] data) {
+            String value;
+            for (int i=0; i<_length; i++) {
+                value = data[_indexes[i]];
+                if (value == null || !value.equals(_values[i])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+    protected static class _Qualifier extends _Abstract {
+        protected _Expression[] _qualifieds = null;
+        protected int[] _qualifiers;
+        protected int _text = -1;
+        public _Qualifier (
+            String path, HashMap<String,_Branch> branches, Feeds feeds
+            ) {
+            super(path);
+            int j = 0;
+            _Branch branch;
+            _Expression qualified;
+            _qualifieds = new _Expression[branches.keySet().size()];
+            HashSet<String> paths = new HashSet(); 
+            HashMap<String,String> qualifiers;
+            for (String expression: branches.keySet()) {
+                // TODO: parse the XPATH expression into a map of strings
+            	qualifiers = new HashMap();
+                branch = branches.get(expression);
+                qualified = new _Expression(new HashMap(), branch, feeds);
+                _qualifieds[j++] = qualified;
+                paths.addAll(qualifiers.keySet());
+            }
+            _qualifiers = new int[paths.size()];
+            int i = 0;
+            for (String qualifier: paths) {
+                _qualifiers[i++] = feeds.values.get(path + qualifier);
+            }
+        }
+        @Override
+        public final void handleStart (Feeds feeds) {
+            if (_text > -1) {
+                cdata = new StringWriter();
+            }
+            String[] data = feeds.data;
+            for (int i=0; i<_qualifiers.length; i++) {
+                data[_qualifiers[i]] = null;
+            }
+        }
+        @Override
+        public final void handleEnd (Feeds feeds) {
+            _Expression qualified;
+            for (int i=0; i<_qualifieds.length; i++) {
+                qualified = _qualifieds[i];
+                if (qualified.eval(feeds.data)) {
+                	// TODO: copy unqualified data to the qualified paths
+                    qualified._branch.handleEnd(feeds);
+                }
+            }
+        }
+    }
+    /**
+     * ...
+     * 
+     */
+    public static final class Feeds {
+        protected String[] data;
+        protected HashMap<String,Feed> handlers;
+        protected HashMap<String,_Abstract> branches;
+        protected HashMap<String,Integer> values = new HashMap();
+        public final String[] data () {
+        	return data;
+        };
+        public final int[] indexes (String[] paths) {
+        	int[] indexes = new int[paths.length];
+            for (int i=0; i<paths.length; i++) {
+            	values.get(paths[i]);
+            }
+            return indexes;
+        }
+        public final Integer index (String path) {
+            return values.get(path);
+        }
+        public final String get (String path) {
+            if (values.containsKey(path)) {
+                return data[values.get(path)];
+            } 
+            return null;
+        }
+        public final void set (String path, String value) {
+            if (values.containsKey(path)) {
+                data[values.get(path)] = value;
+            }
+        }
+        public final void parse (InputStream is, String path, URL baseURL) 
+        throws IOException, XML.Error {
+            FeedParser fp = new FeedParser(this);
+            try {
+                DocumentParser.parse(new OpenEntity(
+                    is, path, baseURL
+                    ), new EntityManagerImpl(), fp, Locale.US);
+            } catch (ApplicationException e) {
+                throw new XML.Error(e);
+            }
+        }
+        public final void parse (File file) throws IOException, XML.Error {
+            parse(new FileInputStream(file), file.getAbsolutePath(), file.toURL());
+        }
+    }
+    /**
+     * Compiles a simply qualified mapping of branches with paths, returns a 
+     * map of branches, qualifiers and leaves <code>Feed</code>s.
+     * 
+     * @param trunk
+     * @param branches with paths
+     * @return a map of XPATHs to Feeds: branches, qualifiers and leaves
+     */
+    public static final Feeds compile (
+        HashMap<String,Feed> handlers, String[] values
+        ) {
+    	Feeds feeds = new Feeds(); 
+        feeds.handlers = handlers;
+        
+        // TODO: outline branches, find qualifiers
+         
+        String[] qualifiers = new String[]{};
+        //
+        feeds.data = new String[values.length + qualifiers.length];
+        int i;
+        for (i=0; i<values.length; i++) {
+            feeds.values.put(values[i], i);
+        }
+        for (int j=0; j<qualifiers.length; j++) {
+            feeds.values.put(qualifiers[j], i++);
+        }
+        return feeds;
+    }
+    protected static final class FeedParser extends ApplicationImpl {
+        protected Feeds feeds;
         protected int depth = -1;
-        protected Feed[] stack = new Feed[1024];
+        protected _Abstract[] stack = new _Abstract[1024];
         protected String[] paths = new String[1024];
-        public FeedParser (HashMap<String,Feed> feeds) {
+        public FeedParser (Feeds feeds) {
             this.feeds = feeds;
             };
         public final void startElement(StartElementEvent event) {
             String name = event.getName();
             String path;
             if (depth < 0) {
-            	path = "";
+                path = "";
             } else if (depth < 1024){
-            	path = paths[depth] + "/" + name;
+                path = paths[depth] + "/" + name;
             } else {
-            	throw new RuntimeException("XML FeedParser stack overflow");
+                throw new RuntimeException("XML BranchParser stack overflow");
             }
-        	Feed feed = feeds.get(path);
+            _Abstract branch = feeds.branches.get(path);
             depth++;
-        	if (feed == null) {
-        		feed = new FeedNull(path);
-        		feeds.put(path, feed);
-        	}
-        	stack[depth] = feed;
-        	paths[depth] = path;
-        	feed.handleStart();
-        	if (feed.attributes == null) {
-        		return;
-        	}
-            if (feed.attributes != null) {
-            	int L = event.getAttributeCount();
+            if (branch == null) {
+                branch = new _Pass(path);
+                feeds.branches.put(path, branch);
+            }
+            stack[depth] = branch;
+            paths[depth] = path;
+            branch.handleStart(feeds);
+            if (branch.attributes) {
+                int L = event.getAttributeCount();
                 for (int i=0; i < L; i++) { 
-                	feed.handleAttribute(
-                		event.getAttributeValue(i), 
+                    feeds.set(
+                        path + "/@" + event.getAttributeValue(i), 
                         event.getAttributeValue(i)
                         );
                 }
             }
+            if (branch.handle != null) {
+                branch.handle.start(feeds);
+            }
         }
         public final void characterData (CharacterDataEvent event) 
         throws IOException {
-        	if (stack[depth] == null) {
-        		return;
-        	}
-        	StringWriter cdata = stack[depth].cdata;
-        	if (cdata != null) {
-        		event.writeChars(stack[depth].cdata);
-        	}
+            StringWriter cdata = stack[depth].cdata;
+            if (cdata != null) {
+                event.writeChars(cdata);
+            }
         }
         public final void endElement(EndElementEvent event) {
-        	if (stack[depth] == null) {
-            	depth--;
-        		return;
-        	}
-        	Feed feed = stack[depth];
-        	StringWriter cdata = feed.cdata;
-        	if (cdata != null) {
-	            cdata.flush();
-	            cdata = null;
-	        	feed.handleText(cdata.toString());
-        	}
-        	feed.handleEnd(stack, depth);
-        	stack[depth] = null;
-        	depth--;
+            _Abstract branch = stack[depth];
+            StringWriter cdata = branch.cdata;
+            if (cdata != null) {
+                cdata.flush();
+                feeds.set(branch.path, cdata.toString());
+                branch.cdata = null;
+             }
+            branch.handleEnd(feeds);
+            stack[depth] = null;
+            depth--;
         }
     }
-    public static final class FeedParserNS extends ApplicationImpl {
+    protected static final class FeedParserNS extends ApplicationImpl {
         protected HashMap<String,String> ns = new HashMap();
         protected HashMap<String,String> prefixes = new HashMap();
-        protected HashMap<String,Feed> feeds = new HashMap();
+        protected Feeds feeds;
         protected int depth = -1;
-        protected Feed[] stack = new Feed[1024];
+        protected _Abstract[] stack = new _Abstract[1024];
         protected String[] paths = new String[1024];
-        public FeedParserNS (HashMap<String,Feed> feeds) {
+        public FeedParserNS (Feeds feeds) {
             this.feeds = feeds;
             };
         public final void startElement(StartElementEvent event) {
             String name = XML.fqn(event.getName(), prefixes);
             String path;
             if (depth < 0) {
-            	path = "";
+                path = "";
             } else if (depth < 1024){
-            	path = paths[depth] + "/" + name;
+                path = paths[depth] + "/" + name;
             } else {
-            	throw new RuntimeException("XML FeedParser stack overflow");
+                throw new RuntimeException("XML BranchParser stack overflow");
             }
-        	Feed feed = feeds.get(path);
+            _Abstract branch = feeds.branches.get(path);
             depth++;
-        	if (feed == null) {
-        		feed = new FeedNull(path);
-        		feeds.put(path, feed);
-        	}
-        	stack[depth] = feed;
-        	feed.path = paths[depth] = path;
-        	feed.handleStart();
+            if (branch == null) {
+                branch = new _Pass(path);
+                feeds.branches.put(path, branch);
+            }
+            stack[depth] = branch;
+            branch.path = paths[depth] = path;
+            branch.handleStart(feeds);
             String[] attributeNames = XML.xmlns (event, ns, prefixes);
-            if (!(attributeNames == null || feed.attributes == null)) {
+            if (branch.attributes && attributeNames != null) {
                 for (int i=0; i < attributeNames.length; i++) { 
                     if (attributeNames[i] != null) {
-                    	feed.handleAttribute(
-                    		XML.fqn(attributeNames[i], prefixes), 
+                        feeds.set(
+                            path + "/@" + XML.fqn(attributeNames[i], prefixes), 
                             event.getAttributeValue(i)
                             );
                     }
                 }
             }
+            if (branch.handle != null) {
+                branch.handle.start(feeds);
+            }
         }
         public final void characterData (CharacterDataEvent event) 
         throws IOException {
-        	if (stack[depth] == null) {
-        		return;
-        	}
-        	StringWriter cdata = stack[depth].cdata;
-        	if (cdata != null) {
-        		event.writeChars(stack[depth].cdata);
-        	}
+            StringWriter cdata = stack[depth].cdata;
+            if (cdata != null) {
+                event.writeChars(cdata);
+            }
         }
         public final void endElement(EndElementEvent event) {
-        	if (stack[depth] == null) {
-            	depth--;
-        		return;
-        	}
-        	Feed feed = stack[depth];
-        	StringWriter cdata = feed.cdata;
-        	if (cdata != null) {
-	            cdata.flush();
-	            cdata = null;
-	        	feed.handleText(cdata.toString());
-        	}
-        	feed.handleEnd(stack, depth);
-        	stack[depth] = null;
-        	depth--;
+            _Abstract branch = stack[depth];
+            StringWriter cdata = branch.cdata;
+            if (cdata != null) {
+                cdata.flush();
+                feeds.set(branch.path, cdata.toString());
+                branch.cdata = null;
+            }
+            branch.handleEnd(feeds);
+            stack[depth] = null;
+            depth--;
         }
-    }
-    public static final void feed (
-		HashMap<String,Feed> feeds, InputStream is, String path, URL baseURL
-		) throws XML.Error, IOException {
-    	FeedParser fp = new FeedParser(feeds);
-        try {
-            DocumentParser.parse(new OpenEntity(
-                is, path, baseURL
-                ), new EntityManagerImpl(), fp, Locale.US);
-        } catch (ApplicationException e) {
-        	throw new XML.Error(e);
-        }
-    }
-    public static final void feed (HashMap<String,Feed> feeds, File file) 
-    throws XML.Error, IOException {
-    	feed(feeds, new FileInputStream(file), file.getAbsolutePath(), file.toURL());
     }
 }
+/* Note about this implementation
+
+   A single array of strings is filled with attributes values and first text data
+   for each qualified and qualifier value paths.
+   
+   Feed handlers start and end methods are called with that array of strings
+   wrapped into a Feeds instance.
+
+*/
