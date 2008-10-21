@@ -19,7 +19,10 @@ package org.protocols;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
@@ -36,7 +39,6 @@ import com.jclark.xml.parse.OpenEntity;
 import com.jclark.xml.parse.StartElementEvent;
 import com.jclark.xml.parse.base.ApplicationImpl;
 
-import org.simple.Objects;
 import org.protocols.XML;
 
 /**
@@ -53,6 +55,159 @@ import org.protocols.XML;
  * 
  */
 public class XPATH {
+    
+    /**
+     * A regular expression to match an XPATH token, grouping the element
+     * name and eventually the qualifier. 
+     */
+    public static final Pattern TOKEN = Pattern.compile(
+        "/([^/\\[]+)(?:\\[(.+?)\\])?"
+        );
+    protected static class Tokenizer implements Iterator<String> {
+        String path;
+        private Matcher regexp;
+        private int end = 0;
+        private int length;
+        public Tokenizer (String path) {
+            this.path = path;
+            length = path.length();
+            regexp = TOKEN.matcher(path);
+        }
+        public final boolean hasNext() {
+            return end < length;
+        }
+        public final String next() {
+            if (!regexp.find()) {
+                throw new Error("Invalid path: " + path);
+            }
+            end = regexp.end();
+            return regexp.group();
+        }
+        public final void remove() {}
+    }
+    /**
+     * Split a path into tokens, returns a string iterator.
+     * 
+     * @param path to split
+     * @return returns an <code>Iterator</code> of <code>String</code>.
+     */
+    public static final Iterator<String> split (String path) {
+        return new Tokenizer(path);
+    }
+    protected static final void outlinePath (HashMap outline, String path) {
+        int L = path.length();
+        Matcher m = TOKEN.matcher(path);
+        String key;
+        Object nested;
+        while (true) {
+            if (!m.find()) {
+                throw new Error("Invalid path: " + path);
+            }
+            key = m.group();
+            if (m.end() < L) {
+                nested = outline.get(key);
+                if (nested == null) {
+                    nested = new HashMap();
+                    outline.put(key, nested);
+                }
+                outline = (HashMap) nested;
+            } else {
+                if (!outline.containsKey(key)) {
+                    outline.put(key, null);
+                }
+                break;
+            }
+        }
+    }
+    /**
+     * Outline an iterator of XPATH strings into nested <code>HashMap</code>.
+     * 
+     * @param paths to outline
+     * @return an outline
+     */
+    public static final HashMap outlinePaths (Iterator<String> paths) {
+        HashMap outline = new HashMap();
+        while (paths.hasNext()) {
+            outlinePath(outline, paths.next());
+        }
+        return outline;
+    }
+    protected static final void outlinePathMap (
+        String path, HashMap map, HashMap outline
+        ) throws Error {
+        int L = path.length();
+        Object value = map.get(path);
+        Matcher m = TOKEN.matcher(path);
+        String key;
+        Object nested;
+        while (true) {
+            if (!m.find()) {
+                throw new Error("Invalid path: " + path);
+            }
+            key = m.group();
+            if (m.end() < L) {
+                nested = outline.get(key);
+                if (nested == null) {
+                    nested = new HashMap();
+                    outline.put(key, nested);
+                }
+                outline = (HashMap) nested;
+            } else {
+                if (!outline.containsKey(key)) {
+                    outline.put(key, value);
+                }
+                break;
+            }
+        }
+    }
+    /**
+     * Outlines a <code>HashMap</code> along the structure implied by its
+     * XPATH keys into a new <code>HashMap</code>. 
+     * 
+     * @param map to outline
+     * @return an outlined map
+     */
+    public static final HashMap outlinePathMap (HashMap map) {
+        HashMap outline = new HashMap();
+        Iterator<String> keys = map.keySet().iterator();
+        while (keys.hasNext()) {
+            outlinePathMap(keys.next(), map, outline);
+        }
+        return outline; 
+    }
+    /**
+     * Update a <code>HashMap</code> with the values collected from an
+     * outline, with flattened XPATH as keys (i.e.: perform the inverse 
+     * transformation of <code>outlinePathMap</code>).
+     * 
+     * @param base path of the result's keys
+     * @param outline to flatten
+     * @param map to update
+     */
+    public static final void collectOutline (
+        String base, HashMap outline, HashMap map
+        ) {
+        Iterator<String> keys = outline.keySet().iterator();
+        String key, path;
+        Object value;
+        while (keys.hasNext()) {
+            key = keys.next();
+            value = outline.get(key);
+            path = base + key;
+            if (value instanceof HashMap) {
+                collectOutline (path, (HashMap) value, map);
+            } else {
+                map.put(path, value);
+            }
+        }
+    }
+    public static final 
+    HashMap<String,Object> collectOutline(HashMap outline) {
+        HashMap<String,Object> map = new HashMap();
+        collectOutline("", outline, map);
+        return map;
+    }
+
     public static interface Feed {
         public void start(Feeds feeds);
         public void end(Feeds feeds);
