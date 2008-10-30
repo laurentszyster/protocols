@@ -1081,19 +1081,20 @@ public final class XML {
             return null;
         }
         public final void close(Document document) {
-            Object value = null;
+            JSON.Object value = null;
             Regular container = getContainer();
             if (container == null) // root 
                 ;
             else if (children == null) { // leaf
                 if (attributes != null) { // complex type of attributes
-                    if (first != null) {
-                        attributes.put("", first);
-                    }
                 	value = new JSON.Object();
                 	_putAllLocal(attributes, (JSON.Object) value);
+                    if (first != null) {
+                        value.put("", first);
+                    }
+                    validate (value, container, document);
                 } else if (first != null) { // simple types
-                    value = first;
+                    validate (first, container, document);
                 }
             } else { // branch, complex type of elements
                 if (json != null) {
@@ -1105,8 +1106,8 @@ public final class XML {
                 	value = new JSON.Object();
                 	_putAllLocal(attributes, (JSON.Object) value);
                 }
+                validate (value, container, document);
             }
-            this.validate (value, container, document);
         }
         /**
          * Applications of XML.Regular should override this method for each
