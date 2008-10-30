@@ -537,7 +537,7 @@ public final class XML {
         /**
          * A convenience to iterate through named children.
          * 
-         * @param names set of the children to iterate.
+         * @param name of the children to iterate.
          * @return an iterator of <code>XML.Element</code>
          * 
          * @test var e = new XML.Element("tag");
@@ -554,8 +554,65 @@ public final class XML {
          *    named.hasNext() == false
          *    );
          */
-        public Iterator<Element> getChildren (String names) {
-            return new ChildrenIterator(this, Objects.set(names));
+        public Iterator<Element> getChildren (String name) {
+            return new ChildrenIterator(this, Objects.set(name));
+        }
+        protected class ChildrenLocalIterator implements Iterator<Element> {
+            private Iterator _children = null;
+            private Element _next = null;
+            private HashSet _names = null;
+            public ChildrenLocalIterator (Element element, HashSet names) {
+                if (element.children == null)
+                    return;
+                
+                _children = element.children.iterator();
+                _names = names;
+                _next();
+            };
+            public boolean hasNext() {
+                return (_next != null);
+            }
+            private void _next() {
+                while (_children.hasNext()) {
+                    _next = (Element) _children.next();
+                    if (_names.contains(_next.getLocalName()))
+                        return;
+                }
+                _next = null;
+            }
+            public Element next() {
+                if (_next == null) {
+                    throw new NoSuchElementException();
+                }
+                Element result = _next;
+                _next();
+                return result;
+            }
+            public void remove() {}
+        }
+        /**
+         * A convenience to iterate through locally named children (i.e.:
+         * using an unqualified tag name).
+         * 
+         * @param name of the children to iterate.
+         * @return an iterator of <code>XML.Element</code>
+         * 
+         * @test var e = new XML.Element("tag");
+         *e.addChild("zero");
+         *e.addChild("one");
+         *e.addChild("two");
+         *e.addChild("one");
+         *e.addChild("two");
+         *e.addChild("three");
+         *var named = e.getChildren("one");
+         *return (
+         *    named.next().toString().equals("<one></one>") &&
+         *    named.next().toString().equals("<one></one>") &&
+         *    named.hasNext() == false
+         *    );
+         */
+        public Iterator<Element> getChildrenLocal (String name) {
+            return new ChildrenLocalIterator(this, Objects.set(name));
         }
         /**
          * A convenience to access an attribute <code>String</code> value
