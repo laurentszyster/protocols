@@ -1,4 +1,4 @@
-/* Copyright (C) 2006-2008 Laurent A.V. Szyster
+/* Copyright (C) 2008 Laurent A.V. Szyster
 
 This library is free software; you can redistribute it and/or modify
 it under the terms of version 2 of the GNU Lesser General Public License as
@@ -18,6 +18,7 @@ package org.protocols;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Locale;
@@ -40,6 +41,7 @@ import com.jclark.xml.parse.StartElementEvent;
 import com.jclark.xml.parse.base.ApplicationImpl;
 
 import org.protocols.XML;
+import org.simple.Fun;
 
 /**
  * A minimal subset of XPATH to support an event parser for XML data, plus path 
@@ -47,7 +49,7 @@ import org.protocols.XML;
  * XML data pipelining processors.
  * 
  * XPATH feeds would suite well state-full applications with asynchronous I/O, 
- * alas if XP can implement an incremental parser it does not provide the 
+ * alas if XP can support an incremental parser it does not provide the 
  * implementation offered by its C successor, Expat. 
  * 
  * So, until someone comes up with JNI bindings for Expat, this will stay a
@@ -55,12 +57,7 @@ import org.protocols.XML;
  * 
  */
 public class XPATH {
-    
-    /**
-     * A regular expression to match an XPATH token, grouping the element
-     * name and eventually the qualifier. 
-     */
-    public static final Pattern TOKEN = Pattern.compile(
+    protected static final Pattern TOKEN = Pattern.compile(
         "/([^/\\[]+)(?:\\[(.+?)\\])?"
         );
     protected static class Tokenizer implements Iterator<String> {
@@ -94,14 +91,35 @@ public class XPATH {
     public static final Iterator<String> split (String path) {
         return new Tokenizer(path);
     }
-    protected static final void outlinePath (HashMap outline, String path) {
+    protected static final Pattern QUALIFIER = Pattern.compile(
+        "(/.+?)\\[(.+?)\\]$"
+        );
+    protected static final Pattern CONJUNCTION = Pattern.compile("\\s+and\\s+");
+    protected static final Pattern EQUALS = Pattern.compile(
+        "^(.*?)(?:\\s*=\\s*(.*))?$"
+        );
+    public static final HashMap<String,String> conjunction (String expressions) {
+    	HashMap<String,String> qualifiers = new HashMap();
+    	for (String expression: CONJUNCTION.split(expressions)) {
+    		Matcher match = EQUALS.matcher(expression);
+    		if (match.matches()) {
+    			qualifiers.put(match.group(1), match.group(2));
+    		} else {
+    			throw new RuntimeException(
+					"XPATH expression '" + expression + "' not supported"
+					);
+    		}
+    	}
+    	return qualifiers;
+    }
+    protected static final void outline (HashMap outline, String path) {
         int L = path.length();
         Matcher m = TOKEN.matcher(path);
         String key;
         Object nested;
         while (true) {
             if (!m.find()) {
-                throw new Error("Invalid path: " + path);
+                throw new Error("invalid XPATH: " + path);
             }
             key = m.group();
             if (m.end() < L) {
@@ -113,7 +131,7 @@ public class XPATH {
                 outline = (HashMap) nested;
             } else {
                 if (!outline.containsKey(key)) {
-                    outline.put(key, null);
+                    outline.put(key, path);
                 }
                 break;
             }
@@ -125,14 +143,14 @@ public class XPATH {
      * @param paths to outline
      * @return an outline
      */
-    public static final HashMap outlinePaths (Iterator<String> paths) {
+    public static final HashMap outline (Iterator<String> paths) {
         HashMap outline = new HashMap();
         while (paths.hasNext()) {
-            outlinePath(outline, paths.next());
+            outline(outline, paths.next());
         }
         return outline;
     }
-    protected static final void outlinePathMap (
+    protected static final void outline (
         String path, HashMap map, HashMap outline
         ) throws Error {
         int L = path.length();
@@ -167,24 +185,24 @@ public class XPATH {
      * @param map to outline
      * @return an outlined map
      */
-    public static final HashMap outlinePathMap (HashMap map) {
+    public static final HashMap outline (HashMap map) {
         HashMap outline = new HashMap();
         Iterator<String> keys = map.keySet().iterator();
         while (keys.hasNext()) {
-            outlinePathMap(keys.next(), map, outline);
+            outline(keys.next(), map, outline);
         }
         return outline; 
     }
     /**
      * Update a <code>HashMap</code> with the values collected from an
      * outline, with flattened XPATH as keys (i.e.: perform the inverse 
-     * transformation of <code>outlinePathMap</code>).
+     * transformation of <code>outline</code>).
      * 
      * @param base path of the result's keys
      * @param outline to flatten
      * @param map to update
      */
-    public static final void collectOutline (
+    public static final void collect (
         String base, HashMap outline, HashMap map
         ) {
         Iterator<String> keys = outline.keySet().iterator();
@@ -195,21 +213,41 @@ public class XPATH {
             value = outline.get(key);
             path = base + key;
             if (value instanceof HashMap) {
-                collectOutline (path, (HashMap) value, map);
+                collect (path, (HashMap) value, map);
             } else {
                 map.put(path, value);
             }
         }
     }
+    /**
+     * Collect an outline into a flat map.
+     * 
+     * @param outline to collect
+     * @return a flat map
+     */
     public static final 
-    HashMap<String,Object> collectOutline(HashMap outline) {
+    HashMap<String,Object> collect(HashMap outline) {
         HashMap<String,Object> map = new HashMap();
-        collectOutline("", outline, map);
+        collect("", outline, map);
         return map;
     }
-
+    /**
+     * The <code>Feed</code> interface implemented by feeds handlers.
+     */
     public static interface Feed {
+    	/**
+    	 * Called once a matching element is opened with an instance of
+    	 * the current <code>Feeds</code> state.
+    	 * 
+    	 * @param feeds
+    	 */
         public void start(Feeds feeds);
+        /**
+    	 * Called once a matching element is closed with an instance of
+    	 * the current <code>Feeds</code> state.
+    	 * 
+         * @param feeds
+         */
         public void end(Feeds feeds);
     }
     protected static abstract class _Abstract {
@@ -217,15 +255,12 @@ public class XPATH {
         protected StringWriter cdata = null;
         protected boolean attributes = false;
         public Feed handle = null;
-        public _Abstract (String path) {
-            this.path = path;
-        }
         public abstract void handleStart (Feeds feeds);
         public abstract void handleEnd (Feeds feeds);
     }
     protected static class _Pass extends _Abstract {
         public _Pass (String path) {
-            super(path);
+            this.path = path;
         }
         @Override
         public final void handleStart (Feeds feeds) {}
@@ -233,12 +268,12 @@ public class XPATH {
         public final void handleEnd (Feeds feeds) {}
     }
     protected static class _Branch extends _Abstract {
-        public _Branch trunk; 
         protected String[] _paths;
         protected int[] _indexes;
         protected int _text = -1;
-        public _Branch (String path, String[] paths, Feeds feeds) {
-            super(path);
+        public final void index (String path, ArrayList<String> values, Feeds feeds) {
+            String[] paths = new String[values.size()];
+            values.toArray(paths);
             _paths = paths;
             _indexes = new int[paths.length];
             for (int i=0; i<_paths.length; i++) {
@@ -323,29 +358,37 @@ public class XPATH {
     }
     protected static class _Qualifier extends _Abstract {
         protected _Expression[] _qualifieds = null;
+        protected HashMap<String,HashMap<String,_Branch>> _paths = new HashMap();
         protected int[] _qualifiers;
         protected int _text = -1;
-        public _Qualifier (
+        public final void index (
             String path, HashMap<String,_Branch> branches, Feeds feeds
             ) {
-            super(path);
-            int j = 0;
-            _Branch branch;
+        }
+        public final void qualify (_Branch branch, Feeds feeds) {
             _Expression qualified;
-            _qualifieds = new _Expression[branches.keySet().size()];
-            HashSet<String> paths = new HashSet(); 
             HashMap<String,String> qualifiers;
-            for (String expression: branches.keySet()) {
+            // TODO: parse the XPATH expression into a map of strings
+        	qualifiers = new HashMap();
+        }
+        public final void bind (Feeds feeds) {
+            int j = 0;
+            HashMap<String,String> qualifiers;
+            _Branch branch;
+            _Expression qualified = null;
+            _qualifieds = new _Expression[_paths.keySet().size()];
+            HashSet<String> values = new HashSet(); 
+            for (String expression: _paths.keySet()) {
                 // TODO: parse the XPATH expression into a map of strings
             	qualifiers = new HashMap();
-                branch = branches.get(expression);
-                qualified = new _Expression(new HashMap(), branch, feeds);
+                HashMap<String,_Branch> branches = _paths.get(expression);
+                // qualified = new _Expression(qualifiers, branch, feeds);
                 _qualifieds[j++] = qualified;
-                paths.addAll(qualifiers.keySet());
+                values.addAll(qualifiers.keySet());
             }
-            _qualifiers = new int[paths.size()];
+            _qualifiers = new int[_paths.size()];
             int i = 0;
-            for (String qualifier: paths) {
+            for (String qualifier: values) {
                 _qualifiers[i++] = feeds.values.get(path + qualifier);
             }
         }
@@ -371,18 +414,69 @@ public class XPATH {
             }
         }
     }
+    protected static final class FeedFun implements Feed {
+    	private Fun _start;
+    	private Fun _end;
+    	public FeedFun (Fun start, Fun end) {
+    		_start = start;
+    		_end = end;
+    	}
+    	public final void start (Feeds feeds) {
+    		try {
+    			_start.apply(feeds);
+    		} catch (Throwable t) {
+    			throw new RuntimeException(t);
+    		}
+    	}
+    	public final void end (Feeds feeds) {
+    		try {
+        		_end.apply(feeds);
+    		} catch (Throwable t) {
+    			throw new RuntimeException(t);
+    		}
+    	}
+    }
+    /**
+     * Wraps two <code>Fun</code> in a <code>Feed</code> implementation, a 
+     * convenience for ECMAScript applications of <code>XPATH.Feeds</code>.
+     * 
+     * @param start function
+     * @param end function
+     * @return a <code>Feed</code> implementation.
+     */
+    public static final Feed feed (Fun start, Fun end) {
+    	return new FeedFun(start, end);
+    }
     /**
      * ...
-     * 
      */
     public static final class Feeds {
         protected String[] data;
-        protected HashMap<String,Feed> handlers;
-        protected HashMap<String,_Abstract> branches;
+        protected HashMap<String,_Abstract> branches = new HashMap();
         protected HashMap<String,Integer> values = new HashMap();
+    	private FeedParser _parser;
+    	/**
+    	 * Return the current path.
+    	 * 
+    	 * @return an XPATH
+    	 */
+        public final String path () {
+        	return _parser.paths[_parser.depth];
+        }
+        /**
+         * Return the current data set.
+         * 
+         * @return
+         */
         public final String[] data () {
         	return data;
-        };
+        }
+        /**
+         * Resolve the indexes of an array of paths in the data set. 
+         * 
+         * @param paths to resolve
+         * @return indexes in the data set
+         */
         public final int[] indexes (String[] paths) {
         	int[] indexes = new int[paths.length];
             for (int i=0; i<paths.length; i++) {
@@ -390,60 +484,133 @@ public class XPATH {
             }
             return indexes;
         }
+        /**
+         * Resolve the index of a path in the data set.
+         * 
+         * @param path to resolve
+         * @return an index in the data set 
+         */
         public final Integer index (String path) {
             return values.get(path);
         }
+        /**
+         * Get a value by path in the data set or null if the path is not indexed.
+         * 
+         * @param path to query in the data set
+         * @return the current value in the data set or null
+         */
         public final String get (String path) {
             if (values.containsKey(path)) {
                 return data[values.get(path)];
             } 
             return null;
         }
+        /**
+         * Set a value by path in the data set, if that path resolves to an index.
+         * 
+         * @param path to resolve in the data set
+         * @param value to eventually set in the data set
+         */
         public final void set (String path, String value) {
             if (values.containsKey(path)) {
                 data[values.get(path)] = value;
             }
         }
+        /**
+         * Parse XML from an input stream.
+         * 
+         * @param is
+         * @param path
+         * @param baseURL
+         * @throws IOException
+         * @throws XML.Error
+         */
         public final void parse (InputStream is, String path, URL baseURL) 
         throws IOException, XML.Error {
-            FeedParser fp = new FeedParser(this);
+            _parser = new FeedParser(this);
             try {
                 DocumentParser.parse(new OpenEntity(
                     is, path, baseURL
-                    ), new EntityManagerImpl(), fp, Locale.US);
+                    ), new EntityManagerImpl(), _parser, Locale.US);
             } catch (ApplicationException e) {
                 throw new XML.Error(e);
+            } finally {
+            	_parser = null;
             }
         }
+        /**
+         * Parse XML from a <code>File</code>.
+         * 
+         * @param file
+         * @throws IOException
+         * @throws XML.Error
+         */
         public final void parse (File file) throws IOException, XML.Error {
             parse(new FileInputStream(file), file.getAbsolutePath(), file.toURL());
         }
     }
+    protected static final void compileBranch (
+		String path, HashMap<String,Object> outline, Feeds feeds 
+		) {
+    	_Branch branch = new _Branch();
+    	ArrayList<String> attributes = new ArrayList();
+    	Object object;
+    	for (String key: outline.keySet()) {
+    		object = outline.get(key);
+        	Matcher match = QUALIFIER.matcher(key);
+        	if (match.matches()) {
+        		String unqualified = match.group(1);
+        		String expression = match.group(2);
+        		if (object instanceof HashMap) {  // ./element[...]/...
+        			compileBranch(path + key, (HashMap) object, feeds);
+        		} else if (key.equals("")) { // ./element[...]
+        			;
+        		} else { // ./@attribute[...] ! unsupported
+        			throw new RuntimeException(
+    					"attributes cannot be qualified: " + path + key  
+    					);
+        		}
+        	} else if (object instanceof HashMap) { // ./element/...
+    			compileBranch(path + key, (HashMap) object, feeds);
+    		} else { // ./element or ./@attribute
+    			attributes.add(key);
+    		}
+    	}
+    	branch.index(path, attributes, feeds);
+    	feeds.branches.put(path, branch);
+    }
     /**
-     * Compiles a simply qualified mapping of branches with paths, returns a 
-     * map of branches, qualifiers and leaves <code>Feed</code>s.
+     * Compiles <code>Feeds</code> from a simply qualified mapping of 
+     * <code>Feed</code> handlers and value paths.
      * 
-     * @param trunk
-     * @param branches with paths
-     * @return a map of XPATHs to Feeds: branches, qualifiers and leaves
+     * @param handlers 
+     * @param values 
+     * @return a <code>Feeds</code> instance
      */
     public static final Feeds compile (
-        HashMap<String,Feed> handlers, String[] values
+        HashMap<String,Feed> handlers, HashSet<String> values
         ) {
-    	Feeds feeds = new Feeds(); 
-        feeds.handlers = handlers;
-        
-        // TODO: outline branches, find qualifiers
-         
+    	Feeds feeds = new Feeds();
+        // size the data set array and compile the indexes.
+        String[] qualified = new String[values.size()];
+        values.toArray(qualified);
         String[] qualifiers = new String[]{};
-        //
-        feeds.data = new String[values.length + qualifiers.length];
+        feeds.data = new String[qualified.length + qualifiers.length];
         int i;
-        for (i=0; i<values.length; i++) {
-            feeds.values.put(values[i], i);
+        for (i=0; i<qualified.length; i++) {
+            feeds.values.put(qualified[i], i);
         }
         for (int j=0; j<qualifiers.length; j++) {
             feeds.values.put(qualifiers[j], i++);
+        }
+        //
+        HashMap<String,Object> outlinedValues = outline(values.iterator());
+        //
+        compileBranch("", outlinedValues, feeds);
+        for (String path: feeds.branches.keySet()) {
+        	if (handlers.containsKey(path)) {
+        		feeds.branches.get(path).handle = handlers.get(path);
+        	}
         }
         return feeds;
     }
@@ -478,7 +645,7 @@ public class XPATH {
                 int L = event.getAttributeCount();
                 for (int i=0; i < L; i++) { 
                     feeds.set(
-                        path + "/@" + event.getAttributeValue(i), 
+                        path + "/@" + event.getAttributeName(i), 
                         event.getAttributeValue(i)
                         );
                 }
@@ -579,5 +746,19 @@ public class XPATH {
    
    Feed handlers start and end methods are called with that array of strings
    wrapped into a Feeds instance.
+   
+   The compilation of a map of XPATH to handlers and values produces a
+   map of branches.
+   
+   ...
+   
+   XPATH qualifier expressions are limited to a simple conjunction of presence
+   or equality tests. This is just enough to handle most XML data interchange
+   generated by an SQL database. The need for elaborated XPATH expressions
+   often indicates that an XML feed parser is neither required nor desirable
+   because the document processed is marked up natural text instead of XML data.
+   In such use cases the application seldom demands what a this implemetation
+   has to offer: minimal memory consumption to handle an XML stream by chunks. 
+   
 
 */
