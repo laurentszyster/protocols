@@ -90,14 +90,13 @@ public final class XML {
 	            return name.substring(colon+1);
 	        } else if (prefixes.containsKey(prefix)) {
 	            return (
-	                ((String)prefixes.get(prefix)) 
-	                + ' ' + name.substring(colon+1)
+	                ((String) prefixes.get(prefix)) + name.substring(colon+1)
 	                );
 	        }
 	        throw new RuntimeException (_namespace_prefix_not_found);
 	    } else if (prefixes.containsKey(_no_prefix)) {
 	        return (
-	            prefixes.get(_no_prefix) + ' ' + name.substring(colon+1)
+	            prefixes.get(_no_prefix) + name.substring(colon+1)
 	            );
 	    }
 	    return name;
@@ -108,6 +107,8 @@ public final class XML {
 		HashMap<String,String> prefixes
 		) {
 	    String name;
+	    String prefix;
+	    String namespace;
 	    String[] attributeNames = null;
 	    int L = event.getAttributeCount();
 	    int A = 0;
@@ -116,13 +117,14 @@ public final class XML {
 	        for (int i=0; i<L; i++) {
 	            name = event.getAttributeName(i);
 	            if (name.equals(_xmlns)) {
-	                ns.put(event.getAttributeValue(i), _no_prefix);
-	                prefixes.put(_no_prefix, event.getAttributeValue(i));
+	            	namespace = event.getAttributeValue(i); 
+	                ns.put(namespace, _no_prefix);
+	                prefixes.put(_no_prefix, namespace + " ");
 	            } else if (name.startsWith(_xmlns_colon)) {
-	                ns.put(event.getAttributeValue(i), name.substring(6));
-	                prefixes.put(
-	                    name.substring(6), event.getAttributeValue(i)
-	                    );
+	            	namespace = event.getAttributeValue(i);
+	            	prefix = name.substring(6);
+	                ns.put(namespace, prefix);
+	                prefixes.put(prefix, namespace + " ");
 	            } else {
 	                attributeNames[i] = name; 
 	                A++;
@@ -131,7 +133,6 @@ public final class XML {
 	    }
 	    return (A > 0) ? attributeNames: null;
 	}
-    
     public static final String localName(String name) {
         int local = name.indexOf(' ');
         if (local > -1)
@@ -264,6 +265,16 @@ public final class XML {
          */
         public Element newElement (String name) {
             return new Element(name);
+        }
+        public final boolean isDescendantOf(Element ancestor) {
+        	Element family = parent;
+        	while (family != null) {
+        		if (family == ancestor) {
+        			return true;
+        		}
+        		family = family.parent;
+        	}
+        	return false;
         }
         /**
          * Add a child element, creates the <code>children</code> array list
