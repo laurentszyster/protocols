@@ -56,11 +56,11 @@ import org.simple.Fun;
  * synchronous XPATH feed processor .-( 
  * 
  */
-public class XPATH {
+public final class XPATH {
     protected static final Pattern TOKEN = Pattern.compile(
         "/([^/\\[]+)(?:\\[(.+?)\\])?"
         );
-    protected static class Tokenizer implements Iterator<String> {
+    protected static final class Tokenizer implements Iterator<String> {
         String path;
         private Matcher regexp;
         private int end = 0;
@@ -98,7 +98,7 @@ public class XPATH {
     protected static final Pattern EQUALS = Pattern.compile(
         "^(.*?)(?:\\s*=\\s*(.*))?$"
         );
-    public static final HashMap<String,String> conjunction (String expressions) {
+    protected static final HashMap<String,String> conjunction (String expressions) {
     	HashMap<String,String> qualifiers = new HashMap();
     	for (String expression: CONJUNCTION.split(expressions)) {
     		Matcher match = EQUALS.matcher(expression);
@@ -171,7 +171,17 @@ public class XPATH {
                 }
                 outline = (HashMap) nested;
             } else {
-                if (!outline.containsKey(key)) {
+                if (outline.containsKey(key)) {
+                	if (outline.get(key) instanceof HashMap) {
+                		throw new RuntimeException(
+            				path + " conflics with " + key
+            				);
+                	} else {
+                		throw new RuntimeException(
+            				"duplicate value mapped to " + path
+            				);
+                	}
+                } else {
                     outline.put(key, value);
                 }
                 break;
@@ -180,7 +190,9 @@ public class XPATH {
     }
     /**
      * Outlines a <code>HashMap</code> along the structure implied by its
-     * XPATH keys into a new <code>HashMap</code>. 
+     * XPATH keys into a new <code>HashMap</code>, throws a runtime exception
+     * when an path leads to an not-empty element in the outline and a value
+     * in the map. 
      * 
      * @param map to outline
      * @return an outlined map
@@ -250,69 +262,104 @@ public class XPATH {
          */
         public void end(Feeds feeds);
     }
-    protected static abstract class _Abstract {
+    protected static final class Branch {
         protected String path;
         protected StringWriter cdata = null;
-        protected boolean attributes = false;
-        public Feed handle = null;
-        public abstract void handleStart (Feeds feeds);
-        public abstract void handleEnd (Feeds feeds);
-    }
-    protected static class _Pass extends _Abstract {
-        public _Pass (String path) {
-            this.path = path;
-        }
-        @Override
-        public final void handleStart (Feeds feeds) {}
-        @Override
-        public final void handleEnd (Feeds feeds) {}
-    }
-    protected static class _Branch extends _Abstract {
-        protected String[] _paths;
-        protected int[] _indexes;
+        protected boolean hasAttributes = false;
+        protected Feed handle = null;
+        protected HashMap<String,HashMap<String,String>> conjunctions = null;
+        protected int[] _attributes = null;
+        protected int[] _related = null;
         protected int _text = -1;
-        public final void index (String path, ArrayList<String> values, Feeds feeds) {
-            String[] paths = new String[values.size()];
-            values.toArray(paths);
-            _paths = paths;
-            _indexes = new int[paths.length];
-            for (int i=0; i<_paths.length; i++) {
-                _indexes[i] = feeds.values.get(path + paths[i]);
-                if (paths[i].equals("")) {
-                    _text = _indexes[i];
+        protected Expression[] _expressions = null;
+        protected int[] _qualifiers = null;
+        protected int[][] _qualifieds = null;
+        public Branch (String path) {
+        	this.path = path;
+        }
+        public final void index (ArrayList<String> attributes, Feeds feeds) {
+        	if (attributes.size() == 0) {
+        		return;
+        	}
+            String[] keys = new String[attributes.size()];
+            attributes.toArray(keys);
+            _attributes = new int[keys.length];
+            for (int i=0; i<keys.length; i++) {
+                _attributes[i] = feeds.values.get(path + keys[i]);
+                if (keys[i].equals("")) {
+                    _text = _attributes[i];
                 }
             }
-            attributes = (
-                _indexes.length > 1 || (_indexes.length == 1 && _text == -1) 
+            hasAttributes = (
+                _attributes.length > 1 || (_attributes.length == 1 && _text == -1) 
                 );
         }
-        @Override
+        public final void relate (HashSet<Integer> related) {
+    		_related = new int[related.size()];
+    		Iterator<Integer> indexes = related.iterator();
+    		int i = 0;
+    		while (indexes.hasNext()) {
+    			_related[i++] = indexes.next();
+    		}
+        }
+        public final void bindQualifiers (Feeds feeds) {
+        	_expressions = new Expression[conjunctions.size()];
+            int j = 0;
+            HashMap<String,String> qualifiers;
+            HashSet<String> values = new HashSet(); 
+        	for (String expression: conjunctions.keySet()) {
+            	qualifiers = conjunctions.get(expression);
+                values.addAll(qualifiers.keySet());
+                _expressions[j++] = new Expression(qualifiers, feeds);
+            }
+            _qualifiers = new int[values.size()];
+            int i = 0;
+            for (String relative: values) {
+                _qualifiers[i++] = feeds.values.get(path + relative);
+            }
+        }
         public final void handleStart (Feeds feeds) {
             if (_text > -1) {
                 cdata = new StringWriter();
             }
             String[] data = feeds.data;
-            for (int i=0, L=_indexes.length; i<L; i++) {
-                data[_indexes[i]] = null;
+            if (_related != null) {
+	            for (int i=0, L=_related.length; i<L; i++) {
+	                data[_related[i]] = null;
+	            }
+            }
+            if (_qualifiers != null) {
+	            for (int i=0; i<_qualifiers.length; i++) {
+	                data[_qualifiers[i]] = null;
+	            }
             }
         }
-        @Override
         public final void handleEnd (Feeds feeds) {
+        	if (_expressions != null) {
+                Expression qualified;
+                for (int i=0; i<_expressions.length; i++) {
+                    qualified = _expressions[i];
+                    if (qualified.eval(feeds.data)) {
+                    	// TODO: copy unqualified data to the qualified paths
+                        qualified._branch.handleEnd(feeds);
+                    }
+                }
+        	}
             if (handle != null) {
                 handle.end(feeds);
             }
         }
     }
-    protected static final class _Expression {
+    protected static final class Expression {
         protected int _length;
         protected String[] _paths;
         protected String[] _values;
         protected int[] _indexes;
-        protected _Branch _branch;
-        public _Expression (
-            HashMap<String,String> qualifiers, _Branch branch, Feeds feeds
+        protected Branch _branch;
+        public Expression (
+            HashMap<String,String> qualifiers, Feeds feeds
             ) {
-            _branch = branch;
+        	// _branch = branch;
             _length = qualifiers.size();
             _paths = new String[_length];
             qualifiers.keySet().toArray(_paths);
@@ -356,64 +403,6 @@ public class XPATH {
             return true;
         }
     }
-    protected static class _Qualifier extends _Abstract {
-        protected _Expression[] _qualifieds = null;
-        protected HashMap<String,HashMap<String,_Branch>> _paths = new HashMap();
-        protected int[] _qualifiers;
-        protected int _text = -1;
-        public final void index (
-            String path, HashMap<String,_Branch> branches, Feeds feeds
-            ) {
-        }
-        public final void qualify (_Branch branch, Feeds feeds) {
-            _Expression qualified;
-            HashMap<String,String> qualifiers;
-            // TODO: parse the XPATH expression into a map of strings
-        	qualifiers = new HashMap();
-        }
-        public final void bind (Feeds feeds) {
-            int j = 0;
-            HashMap<String,String> qualifiers;
-            _Branch branch;
-            _Expression qualified = null;
-            _qualifieds = new _Expression[_paths.keySet().size()];
-            HashSet<String> values = new HashSet(); 
-            for (String expression: _paths.keySet()) {
-                // TODO: parse the XPATH expression into a map of strings
-            	qualifiers = new HashMap();
-                HashMap<String,_Branch> branches = _paths.get(expression);
-                // qualified = new _Expression(qualifiers, branch, feeds);
-                _qualifieds[j++] = qualified;
-                values.addAll(qualifiers.keySet());
-            }
-            _qualifiers = new int[_paths.size()];
-            int i = 0;
-            for (String qualifier: values) {
-                _qualifiers[i++] = feeds.values.get(path + qualifier);
-            }
-        }
-        @Override
-        public final void handleStart (Feeds feeds) {
-            if (_text > -1) {
-                cdata = new StringWriter();
-            }
-            String[] data = feeds.data;
-            for (int i=0; i<_qualifiers.length; i++) {
-                data[_qualifiers[i]] = null;
-            }
-        }
-        @Override
-        public final void handleEnd (Feeds feeds) {
-            _Expression qualified;
-            for (int i=0; i<_qualifieds.length; i++) {
-                qualified = _qualifieds[i];
-                if (qualified.eval(feeds.data)) {
-                	// TODO: copy unqualified data to the qualified paths
-                    qualified._branch.handleEnd(feeds);
-                }
-            }
-        }
-    }
     protected static final class FeedFun implements Feed {
     	private Fun _start;
     	private Fun _end;
@@ -452,8 +441,9 @@ public class XPATH {
      */
     public static final class Feeds {
         protected String[] data;
-        protected HashMap<String,_Abstract> branches = new HashMap();
+        protected HashMap<String,Branch> branches = new HashMap();
         protected HashMap<String,Integer> values = new HashMap();
+    	protected HashMap<String,String> namespaces = null;
     	private FeedParser _parser;
     	/**
     	 * Return the current path.
@@ -517,6 +507,20 @@ public class XPATH {
             }
         }
         /**
+         * Returns the current data set values keyed by XPATHs (for test and
+         * prototyping purpose only, XPATH feeds applications should access the
+         * data array instead!).
+         * 
+         * @return a map of values keyed by XPATHs
+         */
+        public final HashMap<String,String> values () {
+        	HashMap<String,String> map = new HashMap();
+        	for (String path: values.keySet()) {
+        		map.put(path, data[values.get(path)]);
+        	}
+        	return map;
+        }
+        /**
          * Parse XML from an input stream.
          * 
          * @param is
@@ -527,7 +531,7 @@ public class XPATH {
          */
         public final void parse (InputStream is, String path, URL baseURL) 
         throws IOException, XML.Error {
-            _parser = new FeedParser(this);
+            _parser = new FeedParser(this, namespaces);
             try {
                 DocumentParser.parse(new OpenEntity(
                     is, path, baseURL
@@ -549,36 +553,6 @@ public class XPATH {
             parse(new FileInputStream(file), file.getAbsolutePath(), file.toURL());
         }
     }
-    protected static final void compileBranch (
-		String path, HashMap<String,Object> outline, Feeds feeds 
-		) {
-    	_Branch branch = new _Branch();
-    	ArrayList<String> attributes = new ArrayList();
-    	Object object;
-    	for (String key: outline.keySet()) {
-    		object = outline.get(key);
-        	Matcher match = QUALIFIER.matcher(key);
-        	if (match.matches()) {
-        		String unqualified = match.group(1);
-        		String expression = match.group(2);
-        		if (object instanceof HashMap) {  // ./element[...]/...
-        			compileBranch(path + key, (HashMap) object, feeds);
-        		} else if (key.equals("")) { // ./element[...]
-        			;
-        		} else { // ./@attribute[...] ! unsupported
-        			throw new RuntimeException(
-    					"attributes cannot be qualified: " + path + key  
-    					);
-        		}
-        	} else if (object instanceof HashMap) { // ./element/...
-    			compileBranch(path + key, (HashMap) object, feeds);
-    		} else { // ./element or ./@attribute
-    			attributes.add(key);
-    		}
-    	}
-    	branch.index(path, attributes, feeds);
-    	feeds.branches.put(path, branch);
-    }
     /**
      * Compiles <code>Feeds</code> from a simply qualified mapping of 
      * <code>Feed</code> handlers and value paths.
@@ -591,39 +565,188 @@ public class XPATH {
         HashMap<String,Feed> handlers, HashSet<String> values
         ) {
     	Feeds feeds = new Feeds();
-        // size the data set array and compile the indexes.
-        String[] qualified = new String[values.size()];
-        values.toArray(qualified);
-        String[] qualifiers = new String[]{};
-        feeds.data = new String[qualified.length + qualifiers.length];
-        int i;
-        for (i=0; i<qualified.length; i++) {
-            feeds.values.put(qualified[i], i);
-        }
-        for (int j=0; j<qualifiers.length; j++) {
-            feeds.values.put(qualifiers[j], i++);
-        }
-        //
+        // outline all qualified value paths
         HashMap<String,Object> outlinedValues = outline(values.iterator());
-        //
+        // compile qualifier branches and update the value set
+        compileQualifiers("", outlinedValues, values, feeds);
+        // size the data set array and compile its indexes.
+        String[] paths = new String[values.size()];
+        values.toArray(paths);
+        feeds.data = new String[paths.length];
+        int i;
+        for (i=0; i<paths.length; i++) {
+            feeds.values.put(paths[i], i);
+        }
+        // bind the qualifiers expressions to the data set 
+        Branch qualifier;
+        for (String path: feeds.branches.keySet()) {
+        	qualifier = feeds.branches.get(path);
+        	// TODO: ... index the expression's qualifier paths ...
+        }
+        // compile branches, recursing from the trunk
         compileBranch("", outlinedValues, feeds);
+        // assign handlers to branches, index relation to clear.
         for (String path: feeds.branches.keySet()) {
         	if (handlers.containsKey(path)) {
         		feeds.branches.get(path).handle = handlers.get(path);
         	}
         }
+        relate("", outlinedValues, feeds);
         return feeds;
     }
+    protected static final void compileQualifiers (
+		String path, 
+		HashMap<String,Object> outline, 
+		HashSet<String> values,
+		Feeds feeds 
+		) {
+    	Object object;
+    	for (String key: outline.keySet()) {
+    		object = outline.get(key);
+        	Matcher match = QUALIFIER.matcher(key);
+        	if (match.matches()) {
+        		String unqualified = path + match.group(1);
+        		Branch qualifier = feeds.branches.get(unqualified);
+        		if (qualifier == null) {
+        			qualifier = new Branch(unqualified);
+        			qualifier.conjunctions = new HashMap();
+        	    	feeds.branches.put(unqualified, qualifier);
+        		}
+        		String expression = match.group(2);
+        		qualifier.conjunctions.put(expression, conjunction(expression));
+        		for (String relative: qualifier.conjunctions.keySet()) {
+        			values.add(unqualified + relative);
+        		}
+        		if (object instanceof HashMap) {  // ./element[...]/...
+        			compileQualifiers(
+    					unqualified, (HashMap) object, values, feeds
+    					);
+        		} else if (key.equals("")) { // ./element[...]
+        			;
+        		} else { // ./@attribute[...] ! unsupported
+        			throw new RuntimeException(
+    					"attributes cannot be qualified: " + path + key  
+    					);
+        		}
+        	} else if (object instanceof HashMap) {  // ./element[...]/...
+    			compileQualifiers(path + key, (HashMap) object, values, feeds);
+        	}
+    	}
+    	return;
+    }
+    protected static final Branch compileBranch (
+		String path, HashMap<String,Object> outline, Feeds feeds 
+		) {
+    	Branch branch = feeds.branches.get(path); 
+		if (branch == null) {
+			branch = new Branch(path);
+	    	feeds.branches.put(path, branch);
+		} else { // there may be a qualifier branch allready!
+			;
+		}
+    	ArrayList<String> attributes = new ArrayList();
+    	Object object;
+    	for (String key: outline.keySet()) {
+    		object = outline.get(key);
+        	Matcher match = QUALIFIER.matcher(key);
+        	if (match.matches()) {
+        		String unqualified = path + match.group(1);
+        		Branch qualifier = feeds.branches.get(unqualified);
+        		String expression = match.group(2);
+        		if (object instanceof HashMap) {  // ./element[...]/...
+        			compileBranch(path + key, (HashMap) object, feeds);
+        		} else if (key.equals("")) { // ./element[...]
+        			compileBranch(path + key, null, feeds);
+        		} else { // ./@attribute[...] ! unsupported
+        			throw new RuntimeException(
+    					"attributes cannot be qualified: " + path + key  
+    					);
+        		}
+        	} else if (object instanceof HashMap) { // ./element/...
+    			compileBranch(path + key, (HashMap) object, feeds);
+    		} else { // ./element or ./@attribute
+    			attributes.add(key);
+    		}
+    	}
+    	branch.index(attributes, feeds);
+    	return branch;
+    }
+    protected static final HashSet<Integer> relate (
+		String path, 
+		HashMap<String,Object> outline, 
+		Feeds feeds
+		) {
+    	HashSet<Integer> related = new HashSet();
+    	Object object;
+    	for (String key: outline.keySet()) {
+    		object = outline.get(key);
+    		if (object instanceof HashMap) {
+    			related.addAll(relate(path + key, (HashMap) object, feeds));
+    		} else {
+    			related.add(feeds.index(path + key));
+    		}
+    	}
+    	Branch branch = feeds.branches.get(path);
+    	if (branch.handle != null) {
+    		branch.relate(related);
+    	}
+    	return related;
+    }
+	protected static final String[] xmlns (
+		StartElementEvent event, 
+		HashMap<String,String> ns,
+		HashMap<String,String> prefixes
+		) {
+	    String name;
+	    String namespace;
+	    String[] attributeNames = null;
+	    int L = event.getAttributeCount();
+	    int A = 0;
+	    if (L > 0) {
+	        attributeNames = new String[L]; 
+	        for (int i=0; i<L; i++) {
+	            name = event.getAttributeName(i);
+	            if (name.equals("xmlns")) {
+		            namespace = event.getAttributeValue(i);
+		            if (ns.containsKey(namespace)) {
+		            	namespace = ns.get(namespace) + ":";
+		            } else {
+		            	namespace = namespace + " ";
+		            	ns.put(namespace, "");
+		            }
+	                prefixes.put("", namespace);
+	            } else if (name.startsWith("xmlns:")) {
+		            namespace = event.getAttributeValue(i);
+		            if (ns.containsKey(namespace)) {
+		            	namespace = ns.get(namespace) + ":";
+		            } else {
+		            	namespace = namespace + " ";
+		            	ns.put(namespace, "");
+		            }
+	                prefixes.put(name.substring(6), namespace);
+	            } else {
+	                attributeNames[i] = name; 
+	                A++;
+	            }
+	        }
+	    }
+	    return (A > 0) ? attributeNames: null;
+	}
     protected static final class FeedParser extends ApplicationImpl {
+        protected HashMap<String,String> ns = null;
+        protected HashMap<String,String> prefixes = new HashMap();
         protected Feeds feeds;
         protected int depth = -1;
-        protected _Abstract[] stack = new _Abstract[1024];
+        protected Branch[] stack = new Branch[1024];
         protected String[] paths = new String[1024];
-        public FeedParser (Feeds feeds) {
+        public FeedParser (Feeds feeds, HashMap<String,String> namespaces) {
             this.feeds = feeds;
+            ns = namespaces;
             };
         public final void startElement(StartElementEvent event) {
-            String name = event.getName();
+        	String name = (ns == null) ?
+    			XML.fqn(event.getName(), prefixes):
+				event.getName();
             String path;
             if (depth < 0) {
                 path = "";
@@ -632,16 +755,28 @@ public class XPATH {
             } else {
                 throw new RuntimeException("XML BranchParser stack overflow");
             }
-            _Abstract branch = feeds.branches.get(path);
+            Branch branch = feeds.branches.get(path);
             depth++;
             if (branch == null) {
-                branch = new _Pass(path);
+                branch = new Branch(path);
                 feeds.branches.put(path, branch);
             }
             stack[depth] = branch;
-            paths[depth] = path;
+            branch.path = paths[depth] = path;
             branch.handleStart(feeds);
-            if (branch.attributes) {
+            if (ns != null) {
+            	String[] attributeNames = xmlns (event, ns, prefixes);
+                if (branch.hasAttributes && attributeNames != null) {
+                    for (int i=0; i < attributeNames.length; i++) { 
+                        if (attributeNames[i] != null) {
+                            feeds.set(
+                                path + "/@" + XML.fqn(attributeNames[i], prefixes), 
+                                event.getAttributeValue(i)
+                                );
+                        }
+                    }
+                }
+            } else {
                 int L = event.getAttributeCount();
                 for (int i=0; i < L; i++) { 
                     feeds.set(
@@ -662,71 +797,7 @@ public class XPATH {
             }
         }
         public final void endElement(EndElementEvent event) {
-            _Abstract branch = stack[depth];
-            StringWriter cdata = branch.cdata;
-            if (cdata != null) {
-                cdata.flush();
-                feeds.set(branch.path, cdata.toString());
-                branch.cdata = null;
-             }
-            branch.handleEnd(feeds);
-            stack[depth] = null;
-            depth--;
-        }
-    }
-    protected static final class FeedParserNS extends ApplicationImpl {
-        protected HashMap<String,String> ns = new HashMap();
-        protected HashMap<String,String> prefixes = new HashMap();
-        protected Feeds feeds;
-        protected int depth = -1;
-        protected _Abstract[] stack = new _Abstract[1024];
-        protected String[] paths = new String[1024];
-        public FeedParserNS (Feeds feeds) {
-            this.feeds = feeds;
-            };
-        public final void startElement(StartElementEvent event) {
-            String name = XML.fqn(event.getName(), prefixes);
-            String path;
-            if (depth < 0) {
-                path = "";
-            } else if (depth < 1024){
-                path = paths[depth] + "/" + name;
-            } else {
-                throw new RuntimeException("XML BranchParser stack overflow");
-            }
-            _Abstract branch = feeds.branches.get(path);
-            depth++;
-            if (branch == null) {
-                branch = new _Pass(path);
-                feeds.branches.put(path, branch);
-            }
-            stack[depth] = branch;
-            branch.path = paths[depth] = path;
-            branch.handleStart(feeds);
-            String[] attributeNames = XML.xmlns (event, ns, prefixes);
-            if (branch.attributes && attributeNames != null) {
-                for (int i=0; i < attributeNames.length; i++) { 
-                    if (attributeNames[i] != null) {
-                        feeds.set(
-                            path + "/@" + XML.fqn(attributeNames[i], prefixes), 
-                            event.getAttributeValue(i)
-                            );
-                    }
-                }
-            }
-            if (branch.handle != null) {
-                branch.handle.start(feeds);
-            }
-        }
-        public final void characterData (CharacterDataEvent event) 
-        throws IOException {
-            StringWriter cdata = stack[depth].cdata;
-            if (cdata != null) {
-                event.writeChars(cdata);
-            }
-        }
-        public final void endElement(EndElementEvent event) {
-            _Abstract branch = stack[depth];
+        	Branch branch = stack[depth];
             StringWriter cdata = branch.cdata;
             if (cdata != null) {
                 cdata.flush();
@@ -744,21 +815,35 @@ public class XPATH {
    A single array of strings is filled with attributes values and first text data
    for each qualified and qualifier value paths.
    
-   Feed handlers start and end methods are called with that array of strings
-   wrapped into a Feeds instance.
+   Feed handlers start and end methods are called with that indexed array of 
+   strings wrapped into a convenient Feeds instance, as the XML stream is parsed 
+   and the data set is filled.
    
-   The compilation of a map of XPATH to handlers and values produces a
-   map of branches.
+   This implementation combines:
    
-   ...
+    1. the convenience of a denormalized data set accessible by a simple
+       subset of XPATH that is good-enough for most XML data interchanges;
+       
+    2. with the constant RAM and CPU footprint of an event-driven parser. 
+   
+   The API fits a common use case of XML data: long stream of data produced by
+   a query from a relational database, a large set of nested relations with 
+   qualifiers encoded in XML elements structured in a way that makes full 
+   denormalization possible as soon as the document's head is processed.
+   
+   If you have to process an insanely large and deep XML stream that encapsulates
+   an data produced by a COBOL application or exchanged in an EDI network, then 
+   XPATH feeds will do.
+   
+   And in this brave Java world it may be the only one to do it practically. 
    
    XPATH qualifier expressions are limited to a simple conjunction of presence
    or equality tests. This is just enough to handle most XML data interchange
    generated by an SQL database. The need for elaborated XPATH expressions
    often indicates that an XML feed parser is neither required nor desirable
    because the document processed is marked up natural text instead of XML data.
+   
    In such use cases the application seldom demands what a this implemetation
    has to offer: minimal memory consumption to handle an XML stream by chunks. 
-   
 
 */
