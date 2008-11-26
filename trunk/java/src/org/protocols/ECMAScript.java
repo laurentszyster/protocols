@@ -121,7 +121,7 @@ public class ECMAScript {
      */
     public static final void main (String[] arguments) throws Throwable {
         ContextFactory cf = new ContextFactory();
-        context = cf.enterContext();
+    	context = cf.enter(); // support Rhino 1.6 and 1.7
         ScriptableObject scope = new ImporterTopLevel(context, false);
         Scriptable self = (Scriptable) Context.javaToJS(ECMAScript.class, scope);
         try {
