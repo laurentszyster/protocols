@@ -91,12 +91,12 @@ public final class XPATH {
     public static final Iterator<String> split (String path) {
         return new Tokenizer(path);
     }
-    protected static final Pattern QUALIFIER = Pattern.compile(
-        "(/.+?)\\[(.+?)\\]$"
+    protected static final Pattern QUALIFIED = Pattern.compile(
+        "(/[^/\\[]+)\\[(.+?)\\]$"
         );
     protected static final Pattern CONJUNCTION = Pattern.compile("\\s+and\\s+");
     protected static final Pattern EQUALS = Pattern.compile(
-        "^(.*?)(?:\\s*=\\s*(.*))?$"
+        "^(/[^/\\[\\s=]+)(?:\\s*=\\s*\"(.*)\")?$"
         );
     protected static final HashMap<String,String> conjunction (String expressions) {
     	HashMap<String,String> qualifiers = new HashMap();
@@ -124,7 +124,7 @@ public final class XPATH {
             key = m.group();
             if (m.end() < L) {
                 nested = outline.get(key);
-                if (nested == null) {
+                if (!(nested instanceof HashMap)) {
                     nested = new HashMap();
                     outline.put(key, nested);
                 }
@@ -263,86 +263,76 @@ public final class XPATH {
         public void end(Feeds feeds);
     }
     protected static final class Branch {
-        protected String path;
-        protected StringWriter cdata = null;
-        protected boolean hasAttributes = false;
-        protected Feed handle = null;
-        protected HashMap<String,HashMap<String,String>> conjunctions = null;
-        protected int[] _attributes = null;
-        protected int[] _related = null;
-        protected int _text = -1;
-        protected Expression[] _expressions = null;
-        protected int[] _qualifiers = null;
-        protected int[][] _qualifieds = null;
-        public Branch (String path) {
+    	public String path;
+    	public StringWriter cdata = null;
+        public boolean hasAttributes = false;
+        public Feed handle = null;
+        public HashMap<String,HashMap<String,String>> conjunctions = null;
+        public int[] related = null;
+        public int textIndex = -1;
+        public String[] expressions = null;
+        public Qualifier[] qualifieds = null;
+        Branch (String path) {
         	this.path = path;
         }
-        public final void index (ArrayList<String> attributes, Feeds feeds) {
+        final void qualify (Feeds feeds) {
+        	expressions = new String[conjunctions.size()];
+        	qualifieds = new Qualifier[conjunctions.size()];
+            int i = 0;
+            HashMap<String,String> conjunction;
+            HashSet<String> values = new HashSet(); 
+        	for (String expression: conjunctions.keySet()) {
+        		expressions[i] = expression;
+            	conjunction = conjunctions.get(expression);
+                values.addAll(conjunction.keySet());
+                qualifieds[i] = new Qualifier(path, conjunction, feeds);
+                i++;
+            }
+        }
+        final Qualifier qualifier (String expression) {
+        	for (int i=0; i<expressions.length; i++) {
+        		if (expression.equals(expressions[i])) {
+        			return qualifieds[i];
+        		}
+        	}
+        	return null;
+        }
+        final void index (ArrayList<String> attributes, Feeds feeds) {
         	if (attributes.size() == 0) {
         		return;
         	}
-            String[] keys = new String[attributes.size()];
-            attributes.toArray(keys);
-            _attributes = new int[keys.length];
-            for (int i=0; i<keys.length; i++) {
-                _attributes[i] = feeds.values.get(path + keys[i]);
-                if (keys[i].equals("")) {
-                    _text = _attributes[i];
+            for (String attribute: attributes) {
+                if (attribute.equals("")) {
+                    textIndex = feeds.values.get(path + attribute);
                 }
             }
-            hasAttributes = (
-                _attributes.length > 1 || (_attributes.length == 1 && _text == -1) 
-                );
+            hasAttributes = (attributes.size() > 1 || (
+        		attributes.size() == 1 && textIndex == -1
+        		));
         }
-        public final void relate (HashSet<Integer> related) {
-    		_related = new int[related.size()];
+        final void relate (HashSet<Integer> related) {
+    		this.related = new int[related.size()];
     		Iterator<Integer> indexes = related.iterator();
     		int i = 0;
     		while (indexes.hasNext()) {
-    			_related[i++] = indexes.next();
+    			this.related[i++] = indexes.next();
     		}
         }
-        public final void bindQualifiers (Feeds feeds) {
-        	_expressions = new Expression[conjunctions.size()];
-            int j = 0;
-            HashMap<String,String> qualifiers;
-            HashSet<String> values = new HashSet(); 
-        	for (String expression: conjunctions.keySet()) {
-            	qualifiers = conjunctions.get(expression);
-                values.addAll(qualifiers.keySet());
-                _expressions[j++] = new Expression(qualifiers, feeds);
-            }
-            _qualifiers = new int[values.size()];
-            int i = 0;
-            for (String relative: values) {
-                _qualifiers[i++] = feeds.values.get(path + relative);
-            }
-        }
-        public final void handleStart (Feeds feeds) {
-            if (_text > -1) {
+        final void handleStart (Feeds feeds) {
+            if (textIndex > -1) {
                 cdata = new StringWriter();
             }
             String[] data = feeds.data;
-            if (_related != null) {
-	            for (int i=0, L=_related.length; i<L; i++) {
-	                data[_related[i]] = null;
-	            }
-            }
-            if (_qualifiers != null) {
-	            for (int i=0; i<_qualifiers.length; i++) {
-	                data[_qualifiers[i]] = null;
+            if (related != null) {
+	            for (int i=0, L=related.length; i<L; i++) {
+	                data[related[i]] = null;
 	            }
             }
         }
-        public final void handleEnd (Feeds feeds) {
-        	if (_expressions != null) {
-                Expression qualified;
-                for (int i=0; i<_expressions.length; i++) {
-                    qualified = _expressions[i];
-                    if (qualified.eval(feeds.data)) {
-                    	// TODO: copy unqualified data to the qualified paths
-                        qualified._branch.handleEnd(feeds);
-                    }
+        final void handleEnd (Feeds feeds) {
+        	if (qualifieds != null) {
+                for (int i=0; i<qualifieds.length; i++) {
+                    qualifieds[i].apply(feeds);
                 }
         	}
             if (handle != null) {
@@ -350,57 +340,71 @@ public final class XPATH {
             }
         }
     }
-    protected static final class Expression {
-        protected int _length;
-        protected String[] _paths;
-        protected String[] _values;
-        protected int[] _indexes;
-        protected Branch _branch;
-        public Expression (
-            HashMap<String,String> qualifiers, Feeds feeds
+    protected static final class Qualifier {
+        public int length;
+        public String[] paths;
+        public String[] values;
+        public int[] indexes;
+        public HashMap<String,Branch> branches = new HashMap();
+        public int[][] qualifieds = null;
+        Qualifier (
+            String path, HashMap<String,String> qualifiers, Feeds feeds
             ) {
-        	// _branch = branch;
-            _length = qualifiers.size();
-            _paths = new String[_length];
-            qualifiers.keySet().toArray(_paths);
-            Arrays.sort(_paths);
-            _values = new String[_length];
-            _indexes = new int[_length];
-            for (int i=0; i<_length; i++) {
-                _values[i] = qualifiers.get(_paths[i]);
-                _indexes[i] = feeds.values.get(_paths[i]);
+        	// branch = branch;
+            length = qualifiers.size();
+            paths = new String[length];
+            qualifiers.keySet().toArray(paths);
+            Arrays.sort(paths);
+            values = new String[length];
+            indexes = new int[length];
+            for (int i=0; i<length; i++) {
+                values[i] = qualifiers.get(paths[i]);
+                indexes[i] = feeds.values.get(path + paths[i]);
             }
         }
         public final String toString() {
             StringBuilder sb = new StringBuilder();
             sb.append("[");
-            sb.append(_paths[0]);
-            if (_values[0] == null || _values[0].equals("")) {
+            sb.append(paths[0]);
+            if (!(values[0] == null || values[0].equals(""))) {
                 sb.append("=\"");
-                sb.append(_values[0]);
+                sb.append(values[0]);
                 sb.append("\"");
             }
-            for (int i=1; i<_length; i++) {
+            for (int i=1; i<length; i++) {
                 sb.append(" and ");
-                sb.append(_paths[i]);
-                if (_values[i] == null || _values[i].equals("")) {
+                sb.append(paths[i]);
+                if (!(values[i] == null || values[i].equals(""))) {
                     sb.append("=\"");
-                    sb.append(_values[i]);
+                    sb.append(values[i]);
                     sb.append("\"");
                 }
             }
             sb.append("]");
             return sb.toString();
         }
-        public final boolean eval (String[] data) {
+        final boolean eval (String[] data) {
             String value;
-            for (int i=0; i<_length; i++) {
-                value = data[_indexes[i]];
-                if (value == null || !value.equals(_values[i])) {
+            for (int i=0; i<length; i++) {
+                value = data[indexes[i]];
+                if (value == null || !value.equals(values[i])) {
                     return false;
                 }
             }
             return true;
+        }
+        final void apply (Feeds feeds) {
+        	String[] data = feeds.data;
+            if (eval(data)) {
+            	if (qualifieds != null) {
+            		for (int i=0; i<qualifieds.length; i++) {
+                		data[qualifieds[i][0]] = data[qualifieds[i][1]];
+                	}
+            	}
+            	for (String key: branches.keySet()) {
+            		branches.get(key).handleEnd(feeds);
+            	}
+            }
         }
     }
     protected static final class FeedFun implements Feed {
@@ -438,6 +442,8 @@ public final class XPATH {
     }
     /**
      * ...
+     * 
+     * <pre>Feeds feeds = XPATH.compile();</pre>
      */
     public static final class Feeds {
         protected String[] data;
@@ -565,10 +571,19 @@ public final class XPATH {
         HashMap<String,Feed> handlers, HashSet<String> values
         ) {
     	Feeds feeds = new Feeds();
-        // outline all qualified value paths
-        HashMap<String,Object> outlinedValues = outline(values.iterator());
+        // outline all qualified entity and value paths
+    	HashSet<String> xpaths = new HashSet();
+    	xpaths.addAll(handlers.keySet());
+    	xpaths.addAll(values);
+        HashMap<String,Object> outlined = outline(xpaths.iterator());
+        
+        System.err.println(JSON.pprint(outlined));
+        
         // compile qualifier branches and update the value set
-        compileQualifiers("", outlinedValues, values, feeds);
+        compileQualifiers("", outlined, values, feeds);
+
+        System.err.println(JSON.pprint(values));
+        
         // size the data set array and compile its indexes.
         String[] paths = new String[values.size()];
         values.toArray(paths);
@@ -578,20 +593,27 @@ public final class XPATH {
             feeds.values.put(paths[i], i);
         }
         // bind the qualifiers expressions to the data set 
-        Branch qualifier;
         for (String path: feeds.branches.keySet()) {
-        	qualifier = feeds.branches.get(path);
-        	// TODO: ... index the expression's qualifier paths ...
+        	feeds.branches.get(path).qualify(feeds);
         }
+
         // compile branches, recursing from the trunk
-        compileBranch("", outlinedValues, feeds);
+        compileBranch("", outlined, feeds);
         // assign handlers to branches, index relation to clear.
         for (String path: feeds.branches.keySet()) {
         	if (handlers.containsKey(path)) {
         		feeds.branches.get(path).handle = handlers.get(path);
         	}
         }
-        relate("", outlinedValues, feeds);
+
+        for (String key: feeds.branches.keySet()) {
+        	System.err.println(key);
+        	System.err.println(JSON.pprint(
+    			JSON.reflect(feeds.branches.get(key))
+    			));
+        }
+        
+        relate("", outlined, feeds);
         return feeds;
     }
     protected static final void compileQualifiers (
@@ -603,7 +625,7 @@ public final class XPATH {
     	Object object;
     	for (String key: outline.keySet()) {
     		object = outline.get(key);
-        	Matcher match = QUALIFIER.matcher(key);
+        	Matcher match = QUALIFIED.matcher(key);
         	if (match.matches()) {
         		String unqualified = path + match.group(1);
         		Branch qualifier = feeds.branches.get(unqualified);
@@ -614,7 +636,10 @@ public final class XPATH {
         		}
         		String expression = match.group(2);
         		qualifier.conjunctions.put(expression, conjunction(expression));
-        		for (String relative: qualifier.conjunctions.keySet()) {
+        		for (
+    				String relative: 
+        			qualifier.conjunctions.get(expression).keySet()
+        			) {
         			values.add(unqualified + relative);
         		}
         		if (object instanceof HashMap) {  // ./element[...]/...
@@ -648,15 +673,20 @@ public final class XPATH {
     	Object object;
     	for (String key: outline.keySet()) {
     		object = outline.get(key);
-        	Matcher match = QUALIFIER.matcher(key);
+        	Matcher match = QUALIFIED.matcher(key);
         	if (match.matches()) {
         		String unqualified = path + match.group(1);
-        		Branch qualifier = feeds.branches.get(unqualified);
-        		String expression = match.group(2);
+        		Branch qualified = feeds.branches.get(unqualified);
+        		// TODO: parse and re-encode the expression uniformly
+        		Qualifier qualifier = qualified.qualifier(match.group(2));
         		if (object instanceof HashMap) {  // ./element[...]/...
-        			compileBranch(path + key, (HashMap) object, feeds);
+        			qualifier.branches.put(
+    					key, compileBranch(path + key, (HashMap) object, feeds)
+						);
         		} else if (key.equals("")) { // ./element[...]
-        			compileBranch(path + key, null, feeds);
+        			qualifier.branches.put(
+    					key, compileBranch(path + key, null, feeds)
+    					);
         		} else { // ./@attribute[...] ! unsupported
         			throw new RuntimeException(
     					"attributes cannot be qualified: " + path + key  
