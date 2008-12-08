@@ -59,18 +59,6 @@ import org.simple.SIO;
 public class ECMAScript {
     protected static final Object[] _NO_ARGS = new Object[]{};
     protected static Context context;
-    protected static final Function _function (
-        ScriptableObject scope, String name
-        ) {
-        Object function = scope.get(name, scope);
-        if (!(
-            function == null || function == Scriptable.NOT_FOUND
-            ) && function instanceof Function) {
-            return (Function) function;
-        } else {
-            return null;
-        }
-    }
     protected static final class FunScript implements Fun {
         private Function _scope = null;
         public FunScript(Function scope) {
@@ -84,32 +72,87 @@ public class ECMAScript {
         }
     }
     /**
-     * Wrap a JavaScript function in a <code>Fun</code> and return that instance
-     * or throw a <code>RuntimeException</code> if the JavaScript object given
-     * is not a function.
+     * Enter and assign the static <code>ECMAScript.context</code>.
+     */
+    public static final void enter () {
+        ContextFactory cf = new ContextFactory();
+        context = cf.enter(); // support Rhino 1.6 and 1.7
+    }
+    /**
+     * Exit the static <code>ECMAScript.context</code> and set it to null.
+     */
+    public static final void exit () {
+        Context.exit();
+        context = null;
+    }
+    /**
+     * Evaluate sources in the static <code>ECMAScript.context</code> as
+     * a new top level scope.
+     * 
+     * @param script to evaluate
+     * @param name of the source
+     * @return the evaluated scope
+     */
+    public static final ScriptableObject evaluate (
+        String script, String name
+        ) {
+        if (context == null) {
+            throw new RuntimeException(
+                "ECMAScript.enter() must be called first"
+                );
+        }
+        ScriptableObject scope = new ImporterTopLevel(context, false);
+        context.evaluateString(scope, script, name, 1, null);
+        return scope;
+    }
+    /**
+     * Get a named function from the given scope and return an ECMAScript  
+     * <code>Function</code> or <code>null</code>.
+     * 
+     * @param name of the function
+     * @param scope of the function
+     * @return a <code>Fun</code> wrapping the function
+     */
+    public static final Function function (ScriptableObject scope, String name) {
+        Object f = scope.get(name, scope);
+        if (f == null || f == Scriptable.NOT_FOUND) {
+            return null;
+        }
+        if (f instanceof Function) {
+            return (Function) f;
+        } else {
+            throw new RuntimeException(name + " is not a function");
+        }
+    }
+    /**
+     * Wrap a JavaScript function in a <code>Fun</code> and return that 
+     * instance or throw a <code>RuntimeException</code> if the JavaScript 
+     * object given is not a function.
      * 
      * Synopsis
      * 
-	 * <pre>importClass(java.lang.System);
-	 *importClass(Packages.org.protocols.ECMASCript);
-	 *
-	 *function test (name) {
-	 *    System.err.println("hello " + name + "!")
-	 *}
-	 *var java_fun = ECMAScript.fun(test);
-	 *java_fun.apply("world");</pre>
+     * <pre>importClass(java.lang.System);
+     *importClass(Packages.org.protocols.ECMASCript);
+     *
+     *function test (name) {
+     *    System.err.println("hello " + name + "!")
+     *}
+     *var java_fun = ECMAScript.fun(test);
+     *java_fun.apply("world");</pre>
      * 
      * @param function to wrap
      * @return a <code>Fun</code> instance
      * @throws RuntimeException if the JavaScript object is not a function 
      */
     public static final Fun fun (Object function) {
-        if (!(
-            function == null || function == Scriptable.NOT_FOUND
-            ) && function instanceof Function) {
+        if ((function == null || function == Scriptable.NOT_FOUND)) {
+            return null;
+        } else if (function instanceof Function) {
             return new FunScript((Function) function);
         } else {
-            throw new RuntimeException("not a function");
+            throw new RuntimeException(
+                function + " is not a function"
+                );
         }
     }
     /**
@@ -120,8 +163,7 @@ public class ECMAScript {
      * @throws Throwable
      */
     public static final void main (String[] arguments) throws Throwable {
-        ContextFactory cf = new ContextFactory();
-    	context = cf.enter(); // support Rhino 1.6 and 1.7
+        enter();
         ScriptableObject scope = new ImporterTopLevel(context, false);
         Scriptable self = (Scriptable) Context.javaToJS(ECMAScript.class, scope);
         try {
@@ -131,13 +173,12 @@ public class ECMAScript {
             } else {
             	context.evaluateString(scope, SIO.read(System.in), "STDIN", 1, null);
             }
-            Function main = _function(scope, "main");
+            Function main = function(scope, "main");
             if (main != null) {
                 main.call(context, scope, self, arguments);
             }
         } finally {
-            Context.exit();
-            context = null;
+            exit();
         }
     }
 }
