@@ -576,14 +576,14 @@ public final class XPATH {
     	xpaths.addAll(handlers.keySet());
     	xpaths.addAll(values);
         HashMap<String,Object> outlined = outline(xpaths.iterator());
-        
+        /*
         System.err.println(JSON.pprint(outlined));
-        
+        */
         // compile qualifier branches and update the value set
         compileQualifiers("", outlined, values, feeds);
-
+        /*
         System.err.println(JSON.pprint(values));
-        
+        */
         // size the data set array and compile its indexes.
         String[] paths = new String[values.size()];
         values.toArray(paths);
@@ -605,14 +605,14 @@ public final class XPATH {
         		feeds.branches.get(path).handle = handlers.get(path);
         	}
         }
-
+        /*
         for (String key: feeds.branches.keySet()) {
         	System.err.println(key);
         	System.err.println(JSON.pprint(
     			JSON.reflect(feeds.branches.get(key))
     			));
         }
-        
+        */
         relate("", outlined, feeds);
         return feeds;
     }
