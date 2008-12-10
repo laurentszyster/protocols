@@ -267,25 +267,22 @@ public final class XPATH {
     	public StringWriter cdata = null;
         public boolean hasAttributes = false;
         public Feed handle = null;
-        public HashMap<String,HashMap<String,String>> conjunctions = null;
         public int[] related = null;
         public int textIndex = -1;
         public String[] expressions = null;
+        public HashMap<String,Qualifier> qualifiers = new HashMap();
         public Qualifier[] qualifieds = null;
         Branch (String path) {
         	this.path = path;
         }
         final void qualify (Feeds feeds) {
-        	expressions = new String[conjunctions.size()];
-        	qualifieds = new Qualifier[conjunctions.size()];
+        	expressions = new String[qualifiers.size()];
+        	qualifieds = new Qualifier[qualifiers.size()];
             int i = 0;
-            HashMap<String,String> conjunction;
-            HashSet<String> values = new HashSet(); 
-        	for (String expression: conjunctions.keySet()) {
+        	for (String expression: qualifiers.keySet()) {
         		expressions[i] = expression;
-            	conjunction = conjunctions.get(expression);
-                values.addAll(conjunction.keySet());
-                qualifieds[i] = new Qualifier(path, conjunction, feeds);
+                qualifieds[i] = qualifiers.get(expression);
+                qualifieds[i].index(path, feeds);
                 i++;
             }
         }
@@ -345,21 +342,30 @@ public final class XPATH {
         public String[] paths;
         public String[] values;
         public int[] indexes;
+        public HashMap<String,String> conjunction = null;
         public HashMap<String,Branch> branches = new HashMap();
+        public HashMap<String,String> qualify = new HashMap();
         public int[][] qualifieds = null;
-        Qualifier (
-            String path, HashMap<String,String> qualifiers, Feeds feeds
-            ) {
-        	// branch = branch;
-            length = qualifiers.size();
+        public Qualifier (HashMap<String,String> conjunction) {
+        	this.conjunction = conjunction;
+        }
+        public final void index (String path, Feeds feeds) {
+            length = conjunction.size();
             paths = new String[length];
-            qualifiers.keySet().toArray(paths);
+            conjunction.keySet().toArray(paths);
             Arrays.sort(paths);
             values = new String[length];
             indexes = new int[length];
             for (int i=0; i<length; i++) {
-                values[i] = qualifiers.get(paths[i]);
+                values[i] = conjunction.get(paths[i]);
                 indexes[i] = feeds.values.get(path + paths[i]);
+            }
+            qualifieds = new int[2][qualify.size()];
+            int i = 0;
+            for (String unqualified: qualify.keySet()) {
+            	qualifieds[0][i] = feeds.index(unqualified);
+            	qualifieds[1][i] = feeds.index(qualify.get(unqualified));
+            	i++;
             }
         }
         public final String toString() {
@@ -383,7 +389,7 @@ public final class XPATH {
             sb.append("]");
             return sb.toString();
         }
-        final boolean eval (String[] data) {
+        public final boolean eval (String[] data) {
             String value;
             for (int i=0; i<length; i++) {
                 value = data[indexes[i]];
@@ -393,12 +399,12 @@ public final class XPATH {
             }
             return true;
         }
-        final void apply (Feeds feeds) {
+        public final void apply (Feeds feeds) {
         	String[] data = feeds.data;
             if (eval(data)) {
             	if (qualifieds != null) {
-            		for (int i=0; i<qualifieds.length; i++) {
-                		data[qualifieds[i][0]] = data[qualifieds[i][1]];
+            		for (int i=0, L=qualifieds[0].length; i<L; i++) {
+                		data[qualifieds[1][i]] = data[qualifieds[0][i]];
                 	}
             	}
             	for (String key: branches.keySet()) {
@@ -447,7 +453,7 @@ public final class XPATH {
      */
     public static final class Feeds {
         protected String[] data;
-        protected HashMap<String,Branch> branches = new HashMap();
+        public HashMap<String,Branch> branches = new HashMap();
         protected HashMap<String,Integer> values = new HashMap();
     	protected HashMap<String,String> namespaces = null;
     	private FeedParser _parser;
@@ -466,6 +472,9 @@ public final class XPATH {
          */
         public final String[] data () {
         	return data;
+        }
+        public final HashMap<String,Integer> indexes () {
+        	return values;
         }
         /**
          * Resolve the indexes of an array of paths in the data set. 
@@ -628,17 +637,17 @@ public final class XPATH {
         	Matcher match = QUALIFIED.matcher(key);
         	if (match.matches()) {
         		String unqualified = path + match.group(1);
-        		Branch qualifier = feeds.branches.get(unqualified);
-        		if (qualifier == null) {
-        			qualifier = new Branch(unqualified);
-        			qualifier.conjunctions = new HashMap();
-        	    	feeds.branches.put(unqualified, qualifier);
+        		Branch qualified = feeds.branches.get(unqualified);
+        		if (qualified == null) {
+        			qualified = new Branch(unqualified);
+        	    	feeds.branches.put(unqualified, qualified);
         		}
         		String expression = match.group(2);
-        		qualifier.conjunctions.put(expression, conjunction(expression));
+        		Qualifier qualifier = new Qualifier(conjunction(expression));
+        		values.addAll(qualifier.conjunction.keySet());
+        		qualified.qualifiers.put(expression, qualifier);
         		for (
-    				String relative: 
-        			qualifier.conjunctions.get(expression).keySet()
+    				String relative: qualifier.conjunction.keySet()
         			) {
         			values.add(unqualified + relative);
         		}
@@ -646,8 +655,16 @@ public final class XPATH {
         			compileQualifiers(
     					unqualified, (HashMap) object, values, feeds
     					);
+        			compileQualifieds(
+    					path + key, 
+    					unqualified, 
+    					(HashMap) object, 
+    					values,
+    					qualifier.qualify
+    					);
         		} else if (key.equals("")) { // ./element[...]
-        			;
+        			values.add(unqualified);
+        			qualifier.qualify.put(unqualified, path + key);
         		} else { // ./@attribute[...] ! unsupported
         			throw new RuntimeException(
     					"attributes cannot be qualified: " + path + key  
@@ -658,6 +675,30 @@ public final class XPATH {
         	}
     	}
     	return;
+    }
+    protected static final void compileQualifieds (
+		String qualified, 
+		String unqualified, 
+		HashMap<String,Object> outline, 
+		HashSet<String> values,
+		HashMap<String,String> qualify
+		) {
+    	Object object;
+    	for (String key: outline.keySet()) {
+    		object = outline.get(key);
+    		if (object instanceof HashMap) {
+    			compileQualifieds(
+					qualified + key,
+					unqualified + key,
+					(HashMap) object, 
+					values,
+					qualify
+					);
+    		} else {
+    			values.add(unqualified + key);
+    			qualify.put(unqualified + key, qualified + key);
+    		}
+    	}
     }
     protected static final Branch compileBranch (
 		String path, HashMap<String,Object> outline, Feeds feeds 
