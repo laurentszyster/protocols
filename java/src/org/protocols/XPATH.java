@@ -586,12 +586,12 @@ public final class XPATH {
     	xpaths.addAll(values);
     	xpaths.remove("");
         HashMap<String,Object> outlined = outline(xpaths.iterator());
-        //
+        /*
         System.err.println(JSON.pprint(outlined));
-        //
+        */
         // compile qualifier branches and update the value set
         compileQualifiers("", outlined, values, feeds);
-        //
+        /*
         String[] sortedValueXpaths = new String[values.size()];
         values.toArray(sortedValueXpaths);
         Arrays.sort(sortedValueXpaths);
@@ -599,7 +599,7 @@ public final class XPATH {
         System.err.println(
             "values.size() == " + sortedValueXpaths.length
             );
-        //
+        */
         // size the data set array and compile its indexes.
         String[] paths = new String[values.size()];
         values.toArray(paths);
@@ -623,7 +623,7 @@ public final class XPATH {
         	}
         }
         relate("", outlined, feeds);
-        //
+        /*
         String[] sortedBranchXpaths = new String[feeds.branches.size()];
         feeds.branches.keySet().toArray(sortedBranchXpaths);
         Arrays.sort(sortedBranchXpaths);
@@ -637,7 +637,7 @@ public final class XPATH {
     			JSON.reflect(feeds.branches.get(key))
     			));
         }
-        //
+        */
         return feeds;
     }
     protected static final void compileQualifiers (
@@ -683,8 +683,6 @@ public final class XPATH {
         		}
         	} else if (object instanceof HashMap) {  // ./element[...]/...
     			compileQualifiers(path + key, (HashMap) object, values, feeds);
-        	} else {
-        	    System.err.println(path + key);
         	}
     	}
     	return;
