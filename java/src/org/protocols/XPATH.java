@@ -584,15 +584,22 @@ public final class XPATH {
     	HashSet<String> xpaths = new HashSet();
     	xpaths.addAll(handlers.keySet());
     	xpaths.addAll(values);
+    	xpaths.remove("");
         HashMap<String,Object> outlined = outline(xpaths.iterator());
-        /*
+        //
         System.err.println(JSON.pprint(outlined));
-        */
+        //
         // compile qualifier branches and update the value set
         compileQualifiers("", outlined, values, feeds);
-        /*
-        System.err.println(JSON.pprint(values));
-        */
+        //
+        String[] sortedValueXpaths = new String[values.size()];
+        values.toArray(sortedValueXpaths);
+        Arrays.sort(sortedValueXpaths);
+        System.err.println(JSON.pprint(sortedValueXpaths));
+        System.err.println(
+            "values.size() == " + sortedValueXpaths.length
+            );
+        //
         // size the data set array and compile its indexes.
         String[] paths = new String[values.size()];
         values.toArray(paths);
@@ -607,22 +614,30 @@ public final class XPATH {
         }
 
         // compile branches, recursing from the trunk
-        compileBranch("", outlined, feeds);
+        xpaths.addAll(values);
+        compileBranch("", outline(xpaths.iterator()), feeds);
         // assign handlers to branches, index relation to clear.
         for (String path: feeds.branches.keySet()) {
         	if (handlers.containsKey(path)) {
         		feeds.branches.get(path).handle = handlers.get(path);
         	}
         }
-        /*
-        for (String key: feeds.branches.keySet()) {
+        relate("", outlined, feeds);
+        //
+        String[] sortedBranchXpaths = new String[feeds.branches.size()];
+        feeds.branches.keySet().toArray(sortedBranchXpaths);
+        Arrays.sort(sortedBranchXpaths);
+        System.err.println(
+            "feeds.branches.size() == " + sortedBranchXpaths.length
+            );
+        System.err.println(JSON.pprint(sortedBranchXpaths));
+        for (String key: sortedBranchXpaths) {
         	System.err.println(key);
         	System.err.println(JSON.pprint(
     			JSON.reflect(feeds.branches.get(key))
     			));
         }
-        */
-        relate("", outlined, feeds);
+        //
         return feeds;
     }
     protected static final void compileQualifiers (
@@ -632,6 +647,7 @@ public final class XPATH {
 		Feeds feeds 
 		) {
     	Object object;
+    	HashMap<String,Object> nested;
     	for (String key: outline.keySet()) {
     		object = outline.get(key);
         	Matcher match = QUALIFIED.matcher(key);
@@ -651,27 +667,24 @@ public final class XPATH {
         			) {
         			values.add(unqualified + relative);
         		}
+                values.add(unqualified);
         		if (object instanceof HashMap) {  // ./element[...]/...
-        			compileQualifiers(
-    					unqualified, (HashMap) object, values, feeds
-    					);
+                    nested = (HashMap) object;
+        			compileQualifiers(unqualified, nested, values, feeds);
         			compileQualifieds(
     					path + key, 
     					unqualified, 
-    					(HashMap) object, 
+    					nested, 
     					values,
     					qualifier.qualify
     					);
-        		} else if (key.equals("")) { // ./element[...]
-        			values.add(unqualified);
-        			qualifier.qualify.put(unqualified, path + key);
-        		} else { // ./@attribute[...] ! unsupported
-        			throw new RuntimeException(
-    					"attributes cannot be qualified: " + path + key  
-    					);
+        		} else { // ./element[...]
+                    qualifier.qualify.put(unqualified, path + key);
         		}
         	} else if (object instanceof HashMap) {  // ./element[...]/...
     			compileQualifiers(path + key, (HashMap) object, values, feeds);
+        	} else {
+        	    System.err.println(path + key);
         	}
     	}
     	return;
@@ -712,31 +725,43 @@ public final class XPATH {
 		}
     	ArrayList<String> attributes = new ArrayList();
     	Object object;
+    	HashMap<String,Object> nested;
     	for (String key: outline.keySet()) {
     		object = outline.get(key);
         	Matcher match = QUALIFIED.matcher(key);
         	if (match.matches()) {
         		String unqualified = path + match.group(1);
         		Branch qualified = feeds.branches.get(unqualified);
-        		// TODO: parse and re-encode the expression uniformly
         		Qualifier qualifier = qualified.qualifier(match.group(2));
         		if (object instanceof HashMap) {  // ./element[...]/...
+                    nested = (HashMap) object;
+                    if (feeds.values.containsKey(path + key)) {
+                        nested.put("", path + key);
+                    }
         			qualifier.branches.put(
-    					key, compileBranch(path + key, (HashMap) object, feeds)
+    					key, compileBranch(path + key, nested, feeds)
 						);
-        		} else if (key.equals("")) { // ./element[...]
+        		} else { // ./element[...]
+        		    nested = new HashMap();
+        		    nested.put("", path + key);
         			qualifier.branches.put(
-    					key, compileBranch(path + key, null, feeds)
+    					key, compileBranch(path + key, nested, feeds)
     					);
-        		} else { // ./@attribute[...] ! unsupported
-        			throw new RuntimeException(
-    					"attributes cannot be qualified: " + path + key  
-    					);
-        		}
+        		} 
         	} else if (object instanceof HashMap) { // ./element/...
-    			compileBranch(path + key, (HashMap) object, feeds);
-    		} else { // ./element or ./@attribute
+        	    nested = (HashMap) object;
+        	    if (feeds.values.containsKey(path + key)) {
+        	        nested.put("", path + key);
+        	    }
+    			compileBranch(path + key, nested, feeds);
+    		} else if (key.startsWith("/@")) { // ./@attribute
     			attributes.add(key);
+    		} else if (!key.equals("")) { // ./element or 
+    		    nested = new HashMap();
+    		    nested.put("", path + key);
+                compileBranch(path + key, nested, feeds);
+    		} else {
+    		    attributes.add("");
     		}
     	}
     	branch.index(attributes, feeds);
