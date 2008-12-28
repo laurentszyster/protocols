@@ -2141,7 +2141,8 @@ public final class JSON {
         os.flush();
     }
 
-    protected static final class UTF8Object implements Iterator<byte[]> {
+    protected static final class UTF8Object 
+    implements Iterator<byte[]>, Iterable<byte[]> {
     	private Map _map;
     	private String[] _keys = null;
     	private StringBuilder _sb = new StringBuilder();
@@ -2173,9 +2174,13 @@ public final class JSON {
     		return Bytes.encode(next, Bytes.UTF8);
     	}
     	public final void remove () {}
+    	public final Iterator<byte[]> iterator () {
+    		return this;
+    	}
     }
     
-    protected static final class UTF8Array implements Iterator<byte[]> {
+    protected static final class UTF8Array 
+    implements Iterator<byte[]>, Iterable<byte[]> {
     	private Iterator _items;
     	private StringBuilder _sb = new StringBuilder();
     	public UTF8Array (Iterator items) {
@@ -2200,6 +2205,9 @@ public final class JSON {
     		return Bytes.encode(next, Bytes.UTF8);
     	}
     	public final void remove () {}
+    	public final Iterator<byte[]> iterator () {
+    		return this;
+    	}
     }
     private static final java.lang.Object[] _NULL = new byte[][]{
     	new byte[]{'n', 'u', 'l', 'l'}
