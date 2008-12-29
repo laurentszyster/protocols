@@ -1319,7 +1319,7 @@ public final class JSON {
     void parseURLencoded (String query, Object json) throws Throwable {
         String arg, name, value;
         int equalAt;
-        Iterator<String> args = Strings.split(query, '&');
+        Iterator<String> args = Strings.split(query, '&').iterator();
         while (args.hasNext()) {
             arg = args.next();
             equalAt = arg.indexOf('=');
