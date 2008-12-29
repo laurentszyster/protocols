@@ -17,22 +17,22 @@ Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 
 package org.simple;
 
-import java.io.File;
-import java.io.FileReader;
 import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.InputStreamReader;
+import java.io.File;
 import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
-import java.util.Iterator;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.regex.Pattern;
 
 /**
@@ -247,6 +247,38 @@ public class SIO {
 		InputStream input, int chunk, String encoding
     	) {
     	return new ReadStrings(input, chunk, encoding);
+    }
+    protected static final class ReadLines 
+    implements Iterable<String>, Iterator<String> {
+    	protected BufferedReader br;
+    	protected String line;
+    	public ReadLines(File file) {
+    		try {
+        		br = new BufferedReader(new FileReader(file));
+    			line = br.readLine();
+    		} catch (IOException e) {
+    			throw new RuntimeException(e);
+    		}
+    	}
+    	public final boolean hasNext() {
+    		return line != null;
+    	}
+    	public final String next () {
+    		String next = line;
+    		try {
+    			line = br.readLine();
+    		} catch (IOException e) {
+    			throw new RuntimeException(e);
+    		}
+    		return next;
+    	}
+    	public final void remove () {}
+    	public final Iterator<String> iterator() {
+    		return this;
+    	}
+    } 
+    public static final Iterable<String> readLines (File file) {
+    	return new ReadLines(file);
     }
     /**
      * ...
