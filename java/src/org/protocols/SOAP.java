@@ -90,7 +90,7 @@ public final class SOAP {
                         attributes != null && 
                         attributes.containsKey(_xsi_type)
                         ) try {
-                        JSONR.Type type = (JSONR.Type) _xsd_types.get(
+                        JSONR.Pattern type = (JSONR.Pattern) _xsd_types.get(
                             attributes.get(_xsi_type)
                             );
                         if (type != null) {
@@ -177,7 +177,7 @@ public final class SOAP {
      * 
      * <h3>Synopsis</h3>
      * 
-     * <pre>JSONR.Type model = JSONR.compile(JSON.object(new Object[]{
+     * <pre>JSONR.Pattern model = JSONR.compile(JSON.object(new Object[]{
      *    "item", "",
      *    "quantity", new Integer(1),
      *    "description", ""
@@ -192,7 +192,7 @@ public final class SOAP {
      * @throws Exception
      */
     public static final XML.Element xsd (
-        XML.Element schema, JSONR.Type model, String name
+        XML.Element schema, JSONR.Pattern model, String name
         ) 
     throws Exception {
         String type = model.name();
@@ -235,7 +235,7 @@ public final class SOAP {
             for (int i=0; i<names.length; i++) {
                 property = (String) names[i];
                 all.addChild(xsd(
-                    schema, (JSONR.Type) ns.get(property), property
+                    schema, (JSONR.Pattern) ns.get(property), property
                     ));
             }
             return new XML.Element(
@@ -246,7 +246,7 @@ public final class SOAP {
         } else if (type.equals("array")) {
             JSON.Array types = (JSON.Array) model.json();
             if (types.size() == 1) {
-                xsd(schema, (JSONR.Type) types.get(0), name);
+                xsd(schema, (JSONR.Pattern) types.get(0), name);
                 XML.Element array = schema.addChild(
                     xsd_complexType, new String[]{_name, name + _Array}
                     );
@@ -370,7 +370,7 @@ public final class SOAP {
         XML.Element message = doc.root.addChild(
             wsdl_message, new String[]{_name, action + _Request}
             );
-        JSONR.Type inputType = (JSONR.Type) jsonr.get(_Request);
+        JSONR.Pattern inputType = (JSONR.Pattern) jsonr.get(_Request);
         if (inputType.name().equals("namespace")) {
              JSON.Object types = (JSON.Object) inputType.json();
              Iterator names = types.keySet().iterator();
@@ -378,7 +378,7 @@ public final class SOAP {
              XML.Element element;
              while (names.hasNext()) {
                  name = (String) names.next();
-                 element = xsd(schema, (JSONR.Type) types.get(name), name);
+                 element = xsd(schema, (JSONR.Pattern) types.get(name), name);
                  message.addChild(wsdl_part, new String[]{
                      _name, element.getAttribute(_name), 
                      _type, element.getAttribute(_type) 
@@ -386,7 +386,7 @@ public final class SOAP {
              }
         } else {
             XML.Element input = xsd(
-                schema, (JSONR.Type) inputType, action + _Request
+                schema, (JSONR.Pattern) inputType, action + _Request
                 );
             message.addChild(wsdl_part, new String[]{
                 _name, "arg0", 
@@ -396,7 +396,7 @@ public final class SOAP {
         // SOAP output <message>, RPC style
         XML.Element output = xsd(
             schema, 
-            (JSONR.Type) jsonr.get(_Response), 
+            (JSONR.Pattern) jsonr.get(_Response), 
             action + _Response
             );
         message = doc.root.addChild(wsdl_message, new String[]{
