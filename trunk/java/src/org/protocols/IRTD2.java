@@ -95,13 +95,13 @@ public class IRTD2 {
      *    ) == '["I","R","T","D","2"]';
      */
     public static final String[] parse (String irtd2) {
-        Iterator tokens = Strings.split(irtd2, ' ');
+        Iterator<String> tokens = Strings.split(irtd2, ' ').iterator();
         return new String[] {
-            (tokens.hasNext()) ? (String) tokens.next() : "", // identity
-            (tokens.hasNext()) ? (String) tokens.next() : "", // rights
-            (tokens.hasNext()) ? (String) tokens.next() : "", // time
-            (tokens.hasNext()) ? (String) tokens.next() : "", // digested
-            (tokens.hasNext()) ? (String) tokens.next() : ""  // digest
+            (tokens.hasNext()) ? tokens.next() : "", // identity
+            (tokens.hasNext()) ? tokens.next() : "", // rights
+            (tokens.hasNext()) ? tokens.next() : "", // time
+            (tokens.hasNext()) ? tokens.next() : "", // digested
+            (tokens.hasNext()) ? tokens.next() : ""  // digest
         };
     }
     

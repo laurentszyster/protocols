@@ -117,7 +117,7 @@ public class SAT {
         String t;
         int L;
         while (depth < bottom) {
-            texts = Strings.split(text, articulators[depth]); 
+            texts = Strings.split(text, articulators[depth]).iterator(); 
             depth++;
             while (texts.hasNext()) {
                 t = texts.next();

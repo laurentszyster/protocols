@@ -135,7 +135,9 @@ public final class HTTP {
     public static final HashMap<String, String> cookies(String encoded) {
         HashMap<String, String> cookies = new HashMap();
         if (encoded != null && encoded.length() > 0) {
-            Iterator<String> strings = Strings.split(encoded, _regular_cookie);
+            Iterator<String> strings = Strings.split(
+        		encoded, _regular_cookie
+        		).iterator();
             String name, value;
             while (strings.hasNext()) {
                 strings.next();

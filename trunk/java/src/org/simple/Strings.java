@@ -29,7 +29,8 @@ public class Strings {
      * A convenient constant: "\r\n".
      */
     public static final String CRLF = "\r\n";
-    protected static class CharSplitIterator implements Iterator<String> {
+    protected static class CharSplitIterator 
+    implements Iterator<String>, Iterable<String>{
         private String _splitted;
         private char _splitter;
         private int _current = 0;
@@ -39,10 +40,10 @@ public class Strings {
             _splitter = splitter;
             _next = splitted.indexOf(splitter);
             }
-        public boolean hasNext () {
+        public final boolean hasNext () {
             return !(_next == -1 && _current == -1);
         }
-        public String next () {
+        public final String next () {
             String token;
             if (_current == -1)
                 return null;
@@ -60,7 +61,10 @@ public class Strings {
             }
             return token;
         }
-        public void remove () {/* optional interface? what else now ...*/}
+        public final void remove () {}
+        public final Iterator<String> iterator() {
+        	return this;
+        }
     }
     /**
      * Returns an <code>Iterator</code> that splits a string with a single
@@ -81,10 +85,11 @@ public class Strings {
      * @param pattern used to split input
      * @return an <code>Iterator</code> of <code>String</code>
      */
-    public static final Iterator<String> split (String text, char splitter) {
+    public static final Iterable<String> split (String text, char splitter) {
         return new CharSplitIterator (text, splitter);
     }
-    protected static class ReSplitIterator implements Iterator<String> {
+    protected static class ReSplitIterator 
+    implements Iterator<String>, Iterable<String> {
         private String _splitted;
         private Matcher _matcher;
         private int _current = 0;
@@ -94,10 +99,10 @@ public class Strings {
             _splitted = splitted;
             _matcher = splitter.matcher(splitted);
         }
-        public boolean hasNext () {
+        public final boolean hasNext () {
             return _matcher != null;
         }
-        public String next () {
+        public final String next () {
             String token;
             if (_matcher == null) {
                 return null;
@@ -119,7 +124,10 @@ public class Strings {
             }
             return token;
         }
-        public void remove () {/* optional interface? what else now ...*/}
+        public final void remove () {}
+        public final Iterator<String> iterator () {
+        	return this;
+        } 
     }
     /**
      * Returns an <code>Iterator</code> that splits a string with a regular
@@ -145,7 +153,7 @@ public class Strings {
      * @param pattern used to split input
      * @return an <code>Iterator</code> of <code>String</code>
      */
-    public static final Iterator<String> split (String text, Pattern pattern) {
+    public static final Iterable<String> split (String text, Pattern pattern) {
         return new ReSplitIterator (text, pattern);
     }
     /**

@@ -244,7 +244,7 @@ public class MIME {
         if (options == null) {
             return null;
         } else {
-            return Strings.split(options, ',');
+            return Strings.split(options, ',').iterator();
         } 
     }
 }
